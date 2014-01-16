@@ -4,6 +4,7 @@
 #include <glm/gtx/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "constants.hpp"
+#include "tools.hpp"
 
 extern GLFWwindow* window;
 extern short windowW, windowH;
@@ -24,19 +25,15 @@ glm::vec3 viewPos = glm::vec3( 0.0f, 0.0f, 0.0f );
 float horizontalAngle = 0.0f;
 float verticalAngle = 1.57f;
 float initialFoV = 45.0f;
-float speed = 100.0f;
+float speed = 6.0f;
 float mouseSpeed = 0.06f;
 
 void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
     initialFoV += yOffset;
 }
 
-void setPosCoord(float lat, float lng){
-    lat = lat/180*localcons::pi;
-    lng = lng/180*localcons::pi;
-    viewPos.x = localcons::earth_radius * cos(lat) * cos(lng);
-    viewPos.y = localcons::earth_radius * sin(lat);
-    viewPos.z = localcons::earth_radius * cos(lat) * sin(lng);
+void setPosCoord(float lat, float lng, float height){
+    viewPos = calcPosFromCoord(lat, lng) * (height+localcons::earth_radius)/localcons::earth_radius;
     up = glm::normalize(viewPos);
     printf("viewPos: (%f, %f, %f)\n", viewPos.x, viewPos.y, viewPos.z);
 }

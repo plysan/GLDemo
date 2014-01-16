@@ -19,7 +19,7 @@ uniform sampler2D myTextureSampler;
 
 void main(){
 
-    gl_Position = MVP * vec4(vertexPosition_modelspace * ((texture2D(myTextureSampler, vertexUV_modelspace).r+10)/10), 1);
+    gl_Position = MVP * vec4(vertexPosition_modelspace * ((texture2D(myTextureSampler, vertexUV_modelspace).r+400)/400), 1);
 
     // Position of the vertex, in worldspace : M * position
     Position_worldspace = (M * vec4(vertexPosition_modelspace,1)).xyz;

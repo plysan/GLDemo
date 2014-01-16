@@ -3,15 +3,27 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include <string.h>
+#include <string>
+#include <sstream>
 #include <tiffio.h>
 #include <glm/glm.hpp>
+#include "constants.hpp"
 
 using namespace std;
 
 #include <GL/glew.h>
 
 double PI = 3.1415926535;
+
+glm::vec3 calcPosFromCoord(float lat, float lng) {
+    lat = lat/180*localcons::pi;
+    lng = lng/180*localcons::pi;
+    return glm::vec3(
+            localcons::earth_radius * cos(lat) * cos(lng),
+            localcons::earth_radius * sin(lng),
+            -localcons::earth_radius * cos(lng) * sin(lat)
+            );
+}
 
 GLuint readTiffImage(char *name){
 
@@ -47,6 +59,17 @@ GLuint readTiffImage(char *name){
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, imageW, imageH, 0, GL_RED, GL_FLOAT, raster);
     delete [] raster;
     TIFFClose(tif);
+    return textureID;
+}
+
+GLuint readTextureFromArray(float* array, GLuint dimension) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, dimension, dimension, 0, GL_RED, GL_FLOAT, array);
     return textureID;
 }
 

@@ -67,29 +67,27 @@ int main( void )
     GLuint matrixVID = glGetUniformLocation( programID, "V" );
     GLuint LightPositionID = glGetUniformLocation( programID, "LightPosition_worldspace" );
 
-    /*GLfloat* g_vertex_buffer_data = new GLfloat[25948806];
-    for (int i=0; i<12974403; i++) {
-        g_vertex_buffer_data[i*2] = ((GLfloat)(i%3603))/3601;
-        g_vertex_buffer_data[i*2+1] = ((GLfloat)(i/3603))/3601;
-    }*/
-    setPosCoord(40.0f, 40.0f);
+    setPosCoord(20.0f, -156.0f, 40.0f);
     int quardTreeLength = 0;
     glm::vec3* g_vertex_buffer_data = createQuardTreePos();
     glm::vec2* g_vertex_uv_data = createQuardTreeUV();
+    float* texture_array = new float[3600*3600*4];
     clock_t before = clock();
     createQuardTree(
-            glm::vec2(-90.0f, -180.0f),
-            glm::vec2(90.0f, 180.0f),
+            glm::vec2(17.0f, -162.0f),
+            glm::vec2(33.0f, -146.0f),
             &quardTreeLength,
             g_vertex_buffer_data,
-            g_vertex_uv_data
+            g_vertex_uv_data,
+            texture_array
             );
     printf("execution time: %fs\n", (double)(clock() - before)/CLOCKS_PER_SEC);
     glm::vec3* g_vertex_normal_data = new glm::vec3[4];
     printf("points: %d\n", quardTreeLength);
 
     GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
-    GLuint texture = readTiffImage("data/n33_w118_1arc_v2.tif");
+    GLuint texture = readTextureFromArray(texture_array, 7200);
+    delete [] texture_array;
 
 	GLuint vertexbuffer;
 	glGenBuffers(1, &vertexbuffer);
