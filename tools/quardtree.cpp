@@ -25,8 +25,11 @@ extern glm::vec3 viewPos;
 
 static glm::vec3* result;
 static glm::vec2* result_uv;
-static int interpolate_count = 11;
-static int dinmension = interpolate_count * interpolate_count;
+static unsigned int* result_index;
+
+// dinmension must be 2^n+1 where n is int
+static int dinmension = 9;
+static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
 static int maxNodes = 1000;
 static int nodeIndex = 0;
 static float minNodeSize = 1.0f;
@@ -48,7 +51,12 @@ glm::vec2* createQuardTreeUV() {
     return result_uv;
 }
 
-void interpolatePos(glm::vec3 tl_pos, glm::vec3 bl_pos, glm::vec3 tr_pos, glm::vec3 br_pos, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
+unsigned int* createQuardTreeElementIndex() {
+    result_index = new unsigned int[maxNodes * ele_index_node_size];
+    return result_index;
+}
+
+void interpolatePos2D(glm::vec3 tl_pos, glm::vec3 bl_pos, glm::vec3 tr_pos, glm::vec3 br_pos, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
     glm::vec3 mt_pos = (tl_pos + tr_pos)/2.0f;
     glm::vec3 mb_pos = (bl_pos + br_pos)/2.0f;
     glm::vec3 ml_pos = (bl_pos + tl_pos)/2.0f;
@@ -68,10 +76,21 @@ void interpolatePos(glm::vec3 tl_pos, glm::vec3 bl_pos, glm::vec3 tr_pos, glm::v
     result_uv[mid_pos_index + dinmension*unit_size] = mb_uv;
     if (unit_size > 1) {
         int sub_unit_size = unit_size/2;
-        interpolatePos(tl_pos, ml_pos, mt_pos, mid_pos, ml_uv, mt_uv, mid_pos_index - dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
-        interpolatePos(mt_pos, mid_pos, tr_pos, mr_pos, mid_uv, tr_uv, mid_pos_index - dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
-        interpolatePos(ml_pos, bl_pos, mid_pos, mb_pos, bl_uv, mid_uv, mid_pos_index + dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
-        interpolatePos(mid_pos, mb_pos, mr_pos, br_pos, mb_uv, mr_uv, mid_pos_index + dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
+        interpolatePos2D(tl_pos, ml_pos, mt_pos, mid_pos, ml_uv, mt_uv, mid_pos_index - dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
+        interpolatePos2D(mt_pos, mid_pos, tr_pos, mr_pos, mid_uv, tr_uv, mid_pos_index - dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
+        interpolatePos2D(ml_pos, bl_pos, mid_pos, mb_pos, bl_uv, mid_uv, mid_pos_index + dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
+        interpolatePos2D(mid_pos, mb_pos, mr_pos, br_pos, mb_uv, mr_uv, mid_pos_index + dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
+    }
+}
+
+void interpolatePos1D(glm::vec3 frst_pos, glm::vec3 lst_pos, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
+    glm::vec3 mid_pos = (frst_pos + lst_pos)/2.0f;
+    result[mid_pos_index] = mid_pos;
+    glm::vec2 mid_uv = (frst_uv + lst_uv)/2.0f;
+    result_uv[mid_pos_index] = mid_uv;
+    if (interval >= unit_size) {
+        interpolatePos1D(frst_pos, mid_pos, frst_uv, mid_uv, mid_pos_index-interval, interval/2, unit_size);
+        interpolatePos1D(mid_pos, lst_pos, mid_uv, lst_uv, mid_pos_index+interval, interval/2, unit_size);
     }
 }
 
@@ -84,8 +103,42 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     glm::vec3 br_pos = calcPosFromCoord(bl_coord.x, tr_coord.y);
     glm::vec3 tl_pos = calcPosFromCoord(tr_coord.x, bl_coord.y);
     glm::vec3 tr_pos = calcPosFromCoord(tr_coord.x, tr_coord.y);
-    interpolatePos(tl_pos, bl_pos, tr_pos, br_pos, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
+    interpolatePos2D(tl_pos, bl_pos, tr_pos, br_pos, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
+    interpolatePos1D(tl_pos, tr_pos, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
+    interpolatePos1D(tl_pos, bl_pos, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
+    result[baseIndex] = tl_pos;
+    result[baseIndex + dinmension - 1] = tr_pos;
+    result[baseIndex + dinmension * dinmension - 1] = br_pos;
+    result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
+
     nodeIndex++;
+}
+
+void genElementIndex() {
+    for (int idx=0; idx<nodeIndex; idx++) {
+        int base_ele_index = idx * ele_index_node_size;
+        int baseIndex_copy = idx * dinmension * dinmension;
+        //printf("ele: %d, idx: %d ~\n", base_ele_index, baseIndex_copy);
+        result_index[base_ele_index++] = baseIndex_copy;
+        for (int i=0; i<dinmension-1; i++) {
+            if (i%2 == 0) {
+                for (int j=0; j<dinmension; j++) {
+                    result_index[base_ele_index++] = baseIndex_copy;
+                    result_index[base_ele_index++] = baseIndex_copy++ + dinmension;
+                }
+                baseIndex_copy += (dinmension - 1);
+            } else {
+                for (int j=0; j<dinmension; j++) {
+                    result_index[base_ele_index++] = baseIndex_copy;
+                    result_index[base_ele_index++] = baseIndex_copy-- + dinmension;
+                }
+                baseIndex_copy += (dinmension + 1);
+            }
+            //printf("mid: ele: %d, idx: %d\n", base_ele_index, baseIndex_copy);
+        }
+        result_index[base_ele_index] = baseIndex_copy;
+        //printf("~ ele: %d, idx: %d\n", base_ele_index, baseIndex_copy);
+    }
 }
 
 float* createLODDEM(int bl_coord_lat, int bl_coord_lng, int scale, int base_index_unit) {
@@ -180,12 +233,15 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, float* texture_array) {
+void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, int* ele_index, unsigned int* result_index_ret, float* texture_array) {
     nodeIndex = *index / dinmension / dinmension;
     result = result_ret;
     result_uv = result_uv_ret;
+    result_index = result_index_ret;
     texture = texture_array;
     selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0);
+    genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
+    *ele_index = nodeIndex * ele_index_node_size;
 }
 

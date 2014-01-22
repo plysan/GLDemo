@@ -71,6 +71,8 @@ int main( void )
     int quardTreeLength = 0;
     glm::vec3* g_vertex_buffer_data = createQuardTreePos();
     glm::vec2* g_vertex_uv_data = createQuardTreeUV();
+    int elemantIndexLength = 0;
+    unsigned int* g_vertex_element_data = createQuardTreeElementIndex();
     float* texture_array = new float[3600*3600*4];
     clock_t before = clock();
     createQuardTree(
@@ -79,11 +81,13 @@ int main( void )
             &quardTreeLength,
             g_vertex_buffer_data,
             g_vertex_uv_data,
+            &elemantIndexLength,
+            g_vertex_element_data,
             texture_array
             );
     printf("execution time: %fs\n", (double)(clock() - before)/CLOCKS_PER_SEC);
     glm::vec3* g_vertex_normal_data = new glm::vec3[4];
-    printf("points: %d\n", quardTreeLength);
+    printf("points: %d, indices: %d\n", quardTreeLength, elemantIndexLength);
 
     GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
     GLuint texture = readTextureFromArray(texture_array, 7200);
@@ -103,6 +107,11 @@ int main( void )
 	glGenBuffers(1, &normalbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*4, g_vertex_normal_data, GL_STATIC_DRAW);
+
+    GLuint elementBuffer;
+    glGenBuffers(1, &elementBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*elemantIndexLength, g_vertex_element_data, GL_STATIC_DRAW);
     
 	do{
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -133,9 +142,10 @@ int main( void )
         glBindTexture(GL_TEXTURE_2D, texture);
         glUniform1i(TextureID, 0);
 
-        // Draw the triangle !
-		glDrawArrays(GL_POINTS, 0, quardTreeLength);
-        //printf("%d\n", quardTreeLength);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+
+		//glDrawArrays(GL_POINTS, 0, quardTreeLength);
+        glDrawElements(GL_LINE_STRIP, elemantIndexLength, GL_UNSIGNED_INT, (void*)0);
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
@@ -152,6 +162,8 @@ int main( void )
 	glfwTerminate();
 
     delete [] g_vertex_buffer_data;
+    delete [] g_vertex_uv_data;
+    delete [] g_vertex_element_data;
 
 	// Cleanup VBO
 	glDeleteBuffers(1, &vertexbuffer);
