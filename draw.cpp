@@ -73,6 +73,7 @@ int main( void )
     glm::vec2* g_vertex_uv_data = createQuardTreeUV();
     int elemantIndexLength = 0;
     unsigned int* g_vertex_element_data = createQuardTreeElementIndex();
+    glm::vec3* g_vertex_normal_data = createNormal();
     float* texture_array = new float[3600*3600*4];
     clock_t before = clock();
     createQuardTree(
@@ -81,12 +82,12 @@ int main( void )
             &quardTreeLength,
             g_vertex_buffer_data,
             g_vertex_uv_data,
+            g_vertex_normal_data,
             &elemantIndexLength,
             g_vertex_element_data,
             texture_array
             );
     printf("execution time: %fs\n", (double)(clock() - before)/CLOCKS_PER_SEC);
-    glm::vec3* g_vertex_normal_data = new glm::vec3[4];
     printf("points: %d, indices: %d\n", quardTreeLength, elemantIndexLength);
 
     GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
@@ -106,7 +107,7 @@ int main( void )
     GLuint normalbuffer;
 	glGenBuffers(1, &normalbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*4, g_vertex_normal_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*quardTreeLength, g_vertex_normal_data, GL_STATIC_DRAW);
 
     GLuint elementBuffer;
     glGenBuffers(1, &elementBuffer);
@@ -124,7 +125,8 @@ int main( void )
         glUniformMatrix4fv(matrixMVPID, 1, GL_FALSE, &MVP[0][0]);
         glUniformMatrix4fv(matrixMID, 1, GL_FALSE, &M[0][0]);
         glUniformMatrix4fv(matrixVID, 1, GL_FALSE, &V[0][0]);
-        glUniform3f(LightPositionID, 0.0f, 9000000.0f, 0.0f);
+        glm::vec3 lightPos = 1000000.0f*calcPosFromCoord(20.0f, -158.0f);
+        glUniform3f(LightPositionID, lightPos.x, lightPos.y, lightPos.z);
 
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);

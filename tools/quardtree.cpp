@@ -26,6 +26,7 @@ extern glm::vec3 viewPos;
 static glm::vec3* result;
 static glm::vec2* result_uv;
 static unsigned int* result_index;
+static glm::vec3* result_normal;
 
 // dinmension must be 2^n+1 where n is int
 static int dinmension = 9;
@@ -54,6 +55,11 @@ glm::vec2* createQuardTreeUV() {
 unsigned int* createQuardTreeElementIndex() {
     result_index = new unsigned int[maxNodes * ele_index_node_size];
     return result_index;
+}
+
+glm::vec3* createNormal() {
+    result_normal = new glm::vec3[maxNodes * dinmension * dinmension];
+    return result_normal;
 }
 
 void interpolatePos2D(glm::vec3 tl_pos, glm::vec3 bl_pos, glm::vec3 tr_pos, glm::vec3 br_pos, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
@@ -122,11 +128,29 @@ void genElementIndex() {
         result_index[base_ele_index++] = baseIndex_copy;
         for (int i=0; i<dinmension-1; i++) {
             if (i%2 == 0) {
+                int normal_index_strip = base_ele_index;
                 for (int j=0; j<dinmension; j++) {
                     result_index[base_ele_index++] = baseIndex_copy;
                     result_index[base_ele_index++] = baseIndex_copy++ + dinmension;
                 }
                 baseIndex_copy += (dinmension - 1);
+
+                result_normal[result_index[normal_index_strip]] =
+                    glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+2]] - result[result_index[normal_index_strip]]);
+                normal_index_strip++;
+                for (int i=0; i<dinmension*2-2; i++) {
+                    if (i%2 == 0) {
+                        result_normal[result_index[normal_index_strip]] =
+                            glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]]);
+                        normal_index_strip++;
+                    } else {
+                        result_normal[result_index[normal_index_strip]] =
+                            glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]]);
+                        normal_index_strip++;
+                    }
+                }
+                result_normal[result_index[normal_index_strip]] =
+                    glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-2]] - result[result_index[normal_index_strip]]);
             } else {
                 for (int j=0; j<dinmension; j++) {
                     result_index[base_ele_index++] = baseIndex_copy;
@@ -233,11 +257,12 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, int* ele_index, unsigned int* result_index_ret, float* texture_array) {
+void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, float* texture_array) {
     nodeIndex = *index / dinmension / dinmension;
     result = result_ret;
     result_uv = result_uv_ret;
     result_index = result_index_ret;
+    result_normal = result_normal_ret;
     texture = texture_array;
     selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0);
     genElementIndex();
