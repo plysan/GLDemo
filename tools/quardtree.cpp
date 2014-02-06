@@ -33,10 +33,12 @@ static int dinmension = 9;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
 static int maxNodes = 1000;
 static int nodeIndex = 0;
+//TODO not static
 static float minNodeSize = 1.0f;
 static float maxNodeSize = 20.0f;
 
 static int texture_unit_size = 3600;
+static int texture_unit_size_dem = 3600;
 static int texture_unit_dinmension = 2;
 static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
 static float* texture;
@@ -116,6 +118,80 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     result[baseIndex + dinmension - 1] = tr_pos;
     result[baseIndex + dinmension * dinmension - 1] = br_pos;
     result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
+
+    int coords_spaned = (int)(tr_coord.x - bl_coord.x);
+    if (coords_spaned == 0) {
+        float bl_coord_lat_texture_offset = 1.0f - (bl_coord.x - (float)(int)bl_coord.x) - (tr_coord.x - bl_coord.x);
+        float bl_coord_lng_texture_offset = bl_coord.y - (float)(int)bl_coord.y;
+        if (bl_coord_lng_texture_offset < 0.0f) {
+            bl_coord_lng_texture_offset += 1.0f;
+        }
+        printf("begin...： %f\n", bl_coord_lng_texture_offset);
+        char ns = bl_coord.x<0.0f ? 's' : 'n';
+        char ew = bl_coord.y<0.0f ? 'w' : 'e';
+        stringstream ss;
+        //TODO you know it
+        ss << "/home/ply/projects/test2/data/Hawaii/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
+        TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
+        if (tif != NULL) {
+            short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
+            int base_index = baseIndex;
+            for (int i=0; i<dinmension; i++) {
+                TIFFReadEncodedStrip(tif, (int)((bl_coord_lat_texture_offset + (float)i/((float)dinmension - 1.0f) * (tr_coord.x - bl_coord.x)) * (float)texture_unit_size_dem), buf, TIFFStripSize(tif));
+                for (int j=0; j<dinmension; j++) {
+                    result[base_index++] *= (((float)(short)buf[(int)((bl_coord_lng_texture_offset + (float)j/((float)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (float)texture_unit_size_dem)])/3000000.0f + 1.0f);
+                }
+            }
+        }
+    } else {
+        // dinmension covers points on both edges of node, so we need to -1
+        float scale = (float)texture_unit_size_dem/(float)((dinmension-1)/coords_spaned);
+        for (int i=(int)bl_coord.x; i<(int)tr_coord.x; i++) {
+            for (int j=(int)bl_coord.y; j<(int)tr_coord.y; j++) {
+                //TODO lat/lng organization in node array ?
+                int base_index_unit = nodeIndex * dinmension * dinmension + dinmension/coords_spaned*(coords_spaned-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned*(j-(int)bl_coord.y);
+                int bl_coord_lat = i;
+                int bl_coord_lng = j;
+                stringstream ss;
+                char ns = bl_coord_lat<0 ? 's' : 'n';
+                char ew = bl_coord_lng<0 ? 'w' : 'e';
+                if (bl_coord_lng < 0) {
+                    bl_coord_lng = -bl_coord_lng;
+                }
+                ss << "/home/ply/projects/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
+                TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
+                if (tif != NULL) {
+                    cout << "reading DEM: " << ss.str() << " scale: " << scale << " baseIndex: " << base_index_unit << " NumOfStrips: " << TIFFNumberOfStrips(tif) << " stripSize: " << TIFFStripSize(tif)/sizeof(short) << endl;
+                    uint32 imageW, imageH;
+                    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
+                    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
+                    short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
+                    int last_index_strip = -1;
+                    for (float strip=0.0f; strip<(float)TIFFNumberOfStrips(tif); strip+=scale) {
+                        if ((int)(strip/scale) != last_index_strip) {
+                            TIFFReadEncodedStrip(tif, (int)strip, buf, TIFFStripSize(tif));
+                            last_index_strip = (int)(strip/scale);
+                        } else {
+                            continue;
+                        }
+                        result[base_index_unit] *= (((float)(short)buf[0])/3000000.0f + 1.0f);
+                        int last_index_row = base_index_unit;
+                        for (float k=scale; k<((float)(TIFFStripSize(tif)))/(float)sizeof(short); k+=scale) {
+                            if (base_index_unit + (int)(k/scale) != last_index_row) {
+                                // The index of result cannot be plus one in every loop, but cast from float, why?
+                                result[base_index_unit + (int)(k/scale)] *= (((float)(short)buf[(int)(k)])/3000000.0f + 1.0f);
+                                last_index_row = base_index_unit + (int)(k/scale);
+                            }
+                        }
+                        base_index_unit += dinmension;
+                    }
+                    //end of row
+                    _TIFFfree(buf);
+                    TIFFClose(tif);
+                }
+            }
+        }
+    }
 
     nodeIndex++;
 }
