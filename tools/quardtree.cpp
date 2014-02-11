@@ -337,6 +337,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
 }
 
 void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array) {
+    TIFFSetWarningHandler(NULL);
     nodeIndex = *index / dinmension / dinmension;
     result = result_ret;
     result_uv = result_uv_ret;
