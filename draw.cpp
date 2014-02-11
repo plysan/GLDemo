@@ -74,7 +74,7 @@ int main( void )
     int elemantIndexLength = 0;
     unsigned int* g_vertex_element_data = createQuardTreeElementIndex();
     glm::vec3* g_vertex_normal_data = createNormal();
-    float* texture_array = new float[3600*3600*4];
+    glm::detail::uint32* texture_array = new glm::detail::uint32[3600*3600*4];
     clock_t before = clock();
     createQuardTree(
             glm::vec2(17.0f, -162.0f),
@@ -147,7 +147,7 @@ int main( void )
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
 
 		//glDrawArrays(GL_POINTS, 0, quardTreeLength);
-        glDrawElements(GL_LINE_STRIP, elemantIndexLength, GL_UNSIGNED_INT, (void*)0);
+        glDrawElements(GL_TRIANGLE_STRIP, elemantIndexLength, GL_UNSIGNED_INT, (void*)0);
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);

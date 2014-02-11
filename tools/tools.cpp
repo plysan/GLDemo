@@ -62,14 +62,14 @@ GLuint readTiffImage(char *name){
     return textureID;
 }
 
-GLuint readTextureFromArray(float* array, GLuint dimension) {
+GLuint readTextureFromArray(glm::detail::uint32* array, GLuint dimension) {
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, dimension, dimension, 0, GL_RED, GL_FLOAT, array);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dimension, dimension, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, array);
     return textureID;
 }
 

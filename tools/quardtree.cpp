@@ -41,7 +41,7 @@ static int texture_unit_size = 3600;
 static int texture_unit_size_dem = 3600;
 static int texture_unit_dinmension = 2;
 static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
-static float* texture;
+static uint32* texture;
 static int texture_unit_index = 0;
 
 glm::vec3* createQuardTreePos() {
@@ -115,9 +115,13 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     interpolatePos1D(tl_pos, tr_pos, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
     interpolatePos1D(tl_pos, bl_pos, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
     result[baseIndex] = tl_pos;
+    result_uv[baseIndex] = glm::vec2(bl_uv.x, tr_uv.y);
     result[baseIndex + dinmension - 1] = tr_pos;
+    result_uv[baseIndex + dinmension - 1] = tr_uv;
     result[baseIndex + dinmension * dinmension - 1] = br_pos;
+    result_uv[baseIndex + dinmension * dinmension - 1] = glm::vec2(tr_uv.x, bl_uv.y);
     result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
+    result_uv[baseIndex + dinmension * (dinmension - 1)] = bl_uv;
 
     int coords_spaned = (int)(tr_coord.x - bl_coord.x);
     if (coords_spaned == 0) {
@@ -126,12 +130,11 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         if (bl_coord_lng_texture_offset < 0.0f) {
             bl_coord_lng_texture_offset += 1.0f;
         }
-        printf("begin...： %f\n", bl_coord_lng_texture_offset);
         char ns = bl_coord.x<0.0f ? 's' : 'n';
         char ew = bl_coord.y<0.0f ? 'w' : 'e';
         stringstream ss;
         //TODO you know it
-        ss << "/home/ply/projects/test2/data/Hawaii/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
+        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
         TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
         if (tif != NULL) {
             short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
@@ -158,7 +161,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                 if (bl_coord_lng < 0) {
                     bl_coord_lng = -bl_coord_lng;
                 }
-                ss << "/home/ply/projects/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
+                ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
                 TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
                 if (tif != NULL) {
                     cout << "reading DEM: " << ss.str() << " scale: " << scale << " baseIndex: " << base_index_unit << " NumOfStrips: " << TIFFNumberOfStrips(tif) << " stripSize: " << TIFFStripSize(tif)/sizeof(short) << endl;
@@ -248,20 +251,21 @@ float* createLODDEM(int bl_coord_lat, int bl_coord_lng, int scale, int base_inde
     if (bl_coord_lng < 0) {
         bl_coord_lng = -bl_coord_lng;
     }
-    ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
+    ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_img.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
-        cout << "reading: " << ss.str() << " scale: " << scale << " baseIndex: " << base_index_unit << " NumOfStrips: " << TIFFNumberOfStrips(tif) << " stripSize: " << TIFFStripSize(tif)/sizeof(short) << endl;
+        cout << "reading img: " << ss.str() << " scale: " << scale << " baseIndex: " << base_index_unit << " NumOfStrips: " << TIFFNumberOfStrips(tif) << " stripSize: " << TIFFStripSize(tif)/sizeof(short) << endl;
         uint32 imageW, imageH;
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
-        short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
+        uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
         int index = 0;
         for (int strip=TIFFNumberOfStrips(tif)-1; strip>-1; strip-=scale) {
             base_index_unit += texture_unit_size * texture_unit_dinmension;
-            TIFFReadEncodedStrip(tif, strip, buf, TIFFStripSize(tif));
-            for (int i=0; i<TIFFStripSize(tif)/sizeof(short); i+=scale) {
-                texture[base_index_unit + i/scale] = ((float)(short)buf[i])/10000.0f;
+            TIFFReadRGBAStrip(tif, strip, buf);
+            for (int i=0; i<TIFFStripSize(tif)/sizeof(uint32); i+=scale) {
+                uint32 color = buf[i];
+                texture[base_index_unit + i/scale] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
             }
         }
         _TIFFfree(buf);
@@ -286,7 +290,6 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord) {
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
                         (j - bl_coord_x_int) * (texture_unit_size/scale) * texture_unit_size * texture_unit_dinmension +
                         (i - bl_coord_y_int) * (texture_unit_size/scale);
-                printf("j: %d, i: %d, base_index_unit: %d\n", j, i, base_index_unit);
                 createLODDEM(j, i, scale, base_index_unit);
             }
         }
@@ -333,7 +336,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, float* texture_array) {
+void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array) {
     nodeIndex = *index / dinmension / dinmension;
     result = result_ret;
     result_uv = result_uv_ret;

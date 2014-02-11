@@ -20,7 +20,7 @@ void main()
     float LightPower = 200000000.0f;
     
     // Material properties
-    vec3 MaterialDiffuseColor = vec3(1,1,1);//texture2D( myTextureSampler, uv ).rgb;
+    vec3 MaterialDiffuseColor = vec3(0.01, 0.01, 0.01) + texture2D( myTextureSampler, uv ).rgb;
     vec3 MaterialAmbientColor = vec3(0.4, 0.4, 0.4) * MaterialDiffuseColor;
     vec3 MaterialSpecularColor = vec3(0.3,0.3,0.3);
 
