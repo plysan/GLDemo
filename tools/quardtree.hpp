@@ -1,3 +1,6 @@
+extern glm::vec3* result;
+extern int dinmension;
+
 glm::vec3* createQuardTreePos();
 glm::vec2* createQuardTreeUV();
 glm::vec3* createNormal();

@@ -25,6 +25,13 @@ glm::vec3 calcPosFromCoord(float lat, float lng) {
             );
 }
 
+glm::vec2 calcCoordFromPos(glm::vec3 pos) {
+    float radius = glm::length(pos);
+    float lng = -localcons::pi - asin(pos.y/radius);
+    float lat = acos(pos.x/radius/cos(lng))/localcons::pi*180.0f;
+    return glm::vec2(lat, lng/localcons::pi*180.0f);
+}
+
 GLuint readTiffImage(char *name){
 
     TIFF *tif;

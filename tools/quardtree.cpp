@@ -24,14 +24,14 @@ using namespace std;
 
 extern glm::vec3 viewPos;
 
-static glm::vec3* result;
-static glm::vec2* result_uv;
 Node* node = new Node;
+glm::vec3* result;
+glm::vec2* result_uv;
 static unsigned int* result_index;
 static glm::vec3* result_normal;
 
 // dinmension must be 2^n+1 where n is int
-static int dinmension = 9;
+int dinmension = 65;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
 static int maxNodes = 1000;
 static int nodeIndex = 0;
