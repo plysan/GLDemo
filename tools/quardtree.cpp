@@ -16,6 +16,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/constants.hpp>
 #include <GL/glew.h>
+#include "quardtree.hpp"
 #include "constants.hpp"
 #include "tools.hpp"
 
@@ -25,6 +26,7 @@ extern glm::vec3 viewPos;
 
 static glm::vec3* result;
 static glm::vec2* result_uv;
+Node* node = new Node;
 static unsigned int* result_index;
 static glm::vec3* result_normal;
 
@@ -300,7 +302,13 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     return new_texture_unit_uv_base;
 }
 
-void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level) {
+void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node* node) {
+    node->start_index = nodeIndex * dinmension * dinmension;
+    node->nodeSize = tr_coord.x - bl_coord.x;
+    glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
+    node->lat = mid_coord.x;
+    node->lng = mid_coord.y;
+
     glm::vec3 bl_pos = calcPosFromCoord(bl_coord.x, bl_coord.y);
     glm::vec3 tr_pos = calcPosFromCoord(tr_coord.x, tr_coord.y);
     float nodeSize = glm::length(bl_pos - tr_pos);
@@ -312,7 +320,6 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         //TODO: need optimizing like uv...
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
         glm::vec2 br_coord = glm::vec2(bl_coord.x, tr_coord.y);
-        glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
         glm::vec2 mt_coord = (tl_coord + tr_coord)/2.0f;
         glm::vec2 mb_coord = (bl_coord + br_coord)/2.0f;
         glm::vec2 ml_coord = (tl_coord + bl_coord)/2.0f;
@@ -327,10 +334,31 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
 
         level++;
-        selectNode(ml_coord, mt_coord, glm::vec2(bl_uv.x, mid_uv.y), glm::vec2(mid_uv.x, tr_uv.y), level);
-        selectNode(bl_coord, mid_coord, bl_uv, mid_uv, level);
-        selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level);
-        selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level);
+
+        node->bl = new Node;
+        node->bl->bl = NULL;
+        node->bl->tl = NULL;
+        node->bl->br = NULL;
+        node->bl->br = NULL;
+        node->tl = new Node;
+        node->tl->bl = NULL;
+        node->tl->tl = NULL;
+        node->tl->br = NULL;
+        node->tl->br = NULL;
+        node->br = new Node;
+        node->br->bl = NULL;
+        node->br->tl = NULL;
+        node->br->br = NULL;
+        node->br->br = NULL;
+        node->tr = new Node;
+        node->tr->bl = NULL;
+        node->tr->tl = NULL;
+        node->tr->br = NULL;
+        node->tr->br = NULL;
+        selectNode(ml_coord, mt_coord, glm::vec2(bl_uv.x, mid_uv.y), glm::vec2(mid_uv.x, tr_uv.y), level, node->tl);
+        selectNode(bl_coord, mid_coord, bl_uv, mid_uv, level, node->bl);
+        selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level, node->tr);
+        selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level, node->br);
     } else {
         addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv);
     }
@@ -344,7 +372,7 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
-    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0);
+    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
