@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "constants.hpp"
 #include "tools.hpp"
+#include "physics.hpp"
 
 extern GLFWwindow* window;
 extern short windowW, windowH;
@@ -22,6 +23,7 @@ glm::vec3 up;
 glm::vec3 tangent(1.0f, 1.0f, 1.0f);
 
 glm::vec3 viewPos = glm::vec3( 0.0f, 0.0f, 0.0f ); 
+Object* viewObj;
 float horizontalAngle = 0.0f;
 float verticalAngle = 1.57f;
 float initialFoV = 45.0f;
@@ -34,6 +36,7 @@ void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
 
 void setPosCoord(float lat, float lng, float height){
     viewPos = calcPosFromCoord(lat, lng) * (height+localcons::earth_radius)/localcons::earth_radius;
+    viewObj = new Object(viewPos);
     up = glm::normalize(viewPos);
     printf("viewPos: (%f, %f, %f)\n", viewPos.x, viewPos.y, viewPos.z);
 }
@@ -66,26 +69,27 @@ void computeMatricesFromInputs(){
 
 	// Move forward
 	if (glfwGetKey( window, GLFW_KEY_W ) == GLFW_PRESS){
-		viewPos += direction * deltaTime * speed;
+		viewObj->velocity += direction * deltaTime * speed;
 	}
 	// Move backward
 	if (glfwGetKey( window, GLFW_KEY_S ) == GLFW_PRESS){
-		viewPos -= direction * deltaTime * speed;
+		viewObj->velocity -= direction * deltaTime * speed;
 	}
 	// Strafe right
 	if (glfwGetKey( window, GLFW_KEY_D ) == GLFW_PRESS){
-		viewPos += right * deltaTime * speed;
+		viewObj->velocity += right * deltaTime * speed;
 	}
 	// Strafe left
 	if (glfwGetKey( window, GLFW_KEY_A ) == GLFW_PRESS){
-		viewPos -= right * deltaTime * speed;
+		viewObj->velocity -= right * deltaTime * speed;
 	}
     if (glfwGetKey( window, GLFW_KEY_SPACE ) == GLFW_PRESS){
-		viewPos += up * deltaTime * speed;
+		viewObj->velocity += up * deltaTime * speed;
 	}
     if (glfwGetKey( window, GLFW_KEY_LEFT_SHIFT ) == GLFW_PRESS){
-		viewPos -= up * deltaTime * speed;
+		viewObj->velocity -= up * deltaTime * speed;
 	}
+    viewPos = viewObj->nextPos();
 	// Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
 	ProjectionMatrix = glm::perspective(initialFoV, (float)windowW / (float)windowH, 0.01f, 10000.0f);
 	// Camera matrix
