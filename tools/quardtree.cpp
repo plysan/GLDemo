@@ -33,13 +33,15 @@ static glm::vec3* result_normal;
 // dinmension must be 2^n+1 where n is int
 int dinmension = 65;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
-static int maxNodes = 1000;
+int maxNodes = 100;
+int vertexBufferSize = dinmension*dinmension*maxNodes;
+int ele_index_size = maxNodes*ele_index_node_size;
 static int nodeIndex = 0;
 //TODO not static
 static float minNodeSize = 1.0f;
-static float maxNodeSize = 20.0f;
+static float maxNodeSize = 100.0f;
 
-static int texture_unit_size = 3600;
+static int texture_unit_size = 2915;
 static int texture_unit_size_dem = 3600;
 static int texture_unit_dinmension = 2;
 static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
@@ -147,6 +149,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                     result[base_index++] *= (((float)(short)buf[(int)((bl_coord_lng_texture_offset + (float)j/((float)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (float)texture_unit_size_dem)])/3000000.0f + 1.0f);
                 }
             }
+            TIFFClose(tif);
         }
     } else {
         // dinmension covers points on both edges of node, so we need to -1
@@ -166,7 +169,6 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                 ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
                 TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
                 if (tif != NULL) {
-                    cout << "reading DEM: " << ss.str() << " scale: " << scale << " baseIndex: " << base_index_unit << " NumOfStrips: " << TIFFNumberOfStrips(tif) << " stripSize: " << TIFFStripSize(tif)/sizeof(short) << endl;
                     uint32 imageW, imageH;
                     TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
                     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
@@ -256,7 +258,6 @@ float* createLODDEM(int bl_coord_lat, int bl_coord_lng, int scale, int base_inde
     ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_img.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
-        cout << "reading img: " << ss.str() << " scale: " << scale << " baseIndex: " << base_index_unit << " NumOfStrips: " << TIFFNumberOfStrips(tif) << " stripSize: " << TIFFStripSize(tif)/sizeof(short) << endl;
         uint32 imageW, imageH;
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
@@ -276,7 +277,6 @@ float* createLODDEM(int bl_coord_lat, int bl_coord_lng, int scale, int base_inde
 }
 
 glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord) {
-    printf("new texture_unit: %d\n", texture_unit_index);
     if (texture_unit_index >= texture_unit_dinmension * texture_unit_dinmension) {
         texture_unit_index--;
     } else {
@@ -328,7 +328,6 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         if (level%2 == 0 && tr_coord.x-bl_coord.x>=1.0f && texture_unit_index < texture_units) {//TODO: Height map size def
             bl_uv = new_texture_unit(bl_coord, tr_coord);
             tr_uv = bl_uv + glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension);
-            printf("new uv map: (%f, %f) (%f, %f)\n", bl_uv.x, bl_uv.y, tr_uv.x, tr_uv.y);
         }
 
         glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
@@ -368,14 +367,21 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     TIFFSetWarningHandler(NULL);
     TIFFSetErrorHandler(NULL);
     nodeIndex = *index / dinmension / dinmension;
+    //TODO
+    texture_unit_index = 0;
     result = result_ret;
     result_uv = result_uv_ret;
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
+    node->bl = NULL;
+    node->br = NULL;
+    node->tl = NULL;
+    node->tr = NULL;
     selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
+    cout << "nodeIndex: " << nodeIndex << endl;
 }
 

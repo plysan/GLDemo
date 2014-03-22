@@ -27,7 +27,7 @@ Object* viewObj;
 float horizontalAngle = 0.0f;
 float verticalAngle = 1.57f;
 float initialFoV = 45.0f;
-float speed = 6.0f;
+float speed = 0.6f;
 float mouseSpeed = 0.06f;
 
 void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {

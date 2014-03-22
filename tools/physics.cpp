@@ -63,7 +63,6 @@ glm::vec3 Object::nextPos() {
     glm::vec3 resultNormal = getResultNormalFromCoord(calcCoordFromPos(position), &result_index);
     glm::vec3 facePoint_to_pos_vector = position - result[result_index];
     if (glm::dot(facePoint_to_pos_vector, resultNormal) < 0.0f) {
-        printf("bounce!!!\n");
         position += -velocity * timeStep;
         velocity = glm::reflect(velocity, resultNormal) * 0.9f;
     } else {
