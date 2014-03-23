@@ -24,14 +24,14 @@ using namespace std;
 
 extern glm::vec3 viewPos;
 
-Node* node = new Node;
+Node* node = NULL;
 glm::vec3* result;
 glm::vec2* result_uv;
 static unsigned int* result_index;
 static glm::vec3* result_normal;
 
 // dinmension must be 2^n+1 where n is int
-int dinmension = 65;
+int dinmension = 129;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
 int maxNodes = 100;
 int vertexBufferSize = dinmension*dinmension*maxNodes;
@@ -63,7 +63,7 @@ unsigned int* createQuardTreeElementIndex() {
     return result_index;
 }
 
-glm::vec3* createNormal() {
+glm::vec3* createQuardTreeNormal() {
     result_normal = new glm::vec3[maxNodes * dinmension * dinmension];
     return result_normal;
 }
@@ -363,7 +363,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array) {
+void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array, Node* new_node) {
     TIFFSetWarningHandler(NULL);
     TIFFSetErrorHandler(NULL);
     nodeIndex = *index / dinmension / dinmension;
@@ -374,14 +374,13 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
-    node->bl = NULL;
-    node->br = NULL;
-    node->tl = NULL;
-    node->tr = NULL;
-    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, node);
+    new_node->bl = NULL;
+    new_node->br = NULL;
+    new_node->tl = NULL;
+    new_node->tr = NULL;
+    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, new_node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
-    cout << "nodeIndex: " << nodeIndex << endl;
 }
 
