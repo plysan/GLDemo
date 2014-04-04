@@ -20,6 +20,7 @@ short windowW = 1366, windowH = 768;
 
 bool updating = false;
 bool unmapping = false;
+bool terminating = false;
 
 glm::vec3** g_vertex_buffer_data;
 glm::vec3* g_mapped_vertex_buffer_data;
@@ -44,6 +45,10 @@ void updateData()
 {
     while (true) {
         std::this_thread::sleep_for (std::chrono::seconds(1));
+        if (terminating) {
+            terminating = false;
+            return;
+        }
         if (!updating) {
             continue;
         }
@@ -269,6 +274,10 @@ int main( void )
 	} // Check if the ESC key was pressed or the window was closed
 	while( !glfwWindowShouldClose(window) );
 
+    terminating = true;
+    while(terminating) {
+        std::this_thread::sleep_for (std::chrono::microseconds(100));
+    }
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
 
