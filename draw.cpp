@@ -123,8 +123,20 @@ int main( void )
     setPosCoord(20.0f, -156.0f, 0.7f);
 
     texture_array = new glm::detail::uint32[2915*2915*4];
-    GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
-    GLuint texture = readTextureFromArray(texture_array, 5830);
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 5830, 5830, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_array);
+
+    GLuint* pixelBuffer = new GLuint[2];
+    glGenBuffers(2, pixelBuffer);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[1]);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, texture_array, GL_STREAM_DRAW);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[2]);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, texture_array, GL_STREAM_DRAW);
 
 	GLuint* vertexbuffer = new GLuint[2];
 	glGenBuffers(2, vertexbuffer);
@@ -168,8 +180,8 @@ int main( void )
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glUniform1i(TextureID, 0);
+    GLuint TextureUID  = glGetUniformLocation(programID, "myTextureSampler");
+    glUniform1i(TextureUID, 0);
 
 	do{
         if (frameCounter%500 == 0 && updating == false) {
@@ -188,6 +200,9 @@ int main( void )
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, NULL, GL_STREAM_DRAW);
             g_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
+            glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, NULL, GL_STREAM_DRAW);
+            texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*2915*2915*4, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             if (NULL == g_vertex_buffer_data) {
                 std::cout << "Error: " << glGetError() << std::endl;
                 throw std::runtime_error("Failed to map buffer.");
@@ -203,6 +218,9 @@ int main( void )
 	        glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
 	        glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
+            // this proccess is synchronous in GPU side and may take noticeable time if texture is large
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 5830, 5830, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 
             updating = true;
         }
@@ -218,6 +236,8 @@ int main( void )
             glUnmapBuffer(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
             glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
+            glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             unmapping = false;
             renderingBufferIndex = (renderingBufferIndex+1)%2;
