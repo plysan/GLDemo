@@ -196,6 +196,10 @@ int main( void )
         if (frameCounter%500 == 0 && updating == false) {
             elemantIndexLengthForRendering = elemantIndexLength;
 
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[(renderingBufferIndex+1)%2]);
+            // this proccess may take noticeable time if update sub rectangle is large based on my experience, why?
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 5830, 5830, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
+
             //orphaning and mapping the buffers that is not used and to be updated
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
@@ -227,9 +231,6 @@ int main( void )
 	        glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
 	        glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
-            // this proccess is synchronous in GPU side and may take noticeable time if texture is large
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 5830, 5830, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 
             updating = true;
         }
