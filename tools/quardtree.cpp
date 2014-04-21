@@ -248,16 +248,31 @@ void genElementIndex() {
     }
 }
 
-float* createLODDEM(int bl_coord_lat, int bl_coord_lng, int scale, int base_index_unit) {
+bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale, int base_index_unit) {
+    bool created = false;
     stringstream ss;
-    char ns = bl_coord_lat<0 ? 's' : 'n';
-    char ew = bl_coord_lng<0 ? 'w' : 'e';
-    if (bl_coord_lng < 0) {
-        bl_coord_lng = -bl_coord_lng;
+    char ns = bl_coord.x<0.0f ? 's' : 'n';
+    char ew = bl_coord.y<0.0f ? 'w' : 'e';
+    if (bl_coord.x < 0.0f) {
+        bl_coord.x = -bl_coord.x;
     }
-    ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_img.tif";
+    if (bl_coord.y < 0.0f) {
+        bl_coord.y = -bl_coord.y;
+    }
+    if (tr_coord.x - bl_coord.x < 1.0f) {
+        if (tr_coord.x < 0.0f) {
+            tr_coord.x = -tr_coord.x;
+        }
+        if (tr_coord.y < 0.0f) {
+            tr_coord.y = -tr_coord.y;
+        }
+        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord.x << '_' << ew << bl_coord.y << '~' << ns << tr_coord.x << '_' << ew << tr_coord.y << "_img.tif";
+    } else {
+        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord.x << '_' << ew << bl_coord.y << "_img.tif";
+    }
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
+        created = true;
         uint32 imageW, imageH;
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
@@ -274,12 +289,13 @@ float* createLODDEM(int bl_coord_lat, int bl_coord_lng, int scale, int base_inde
         _TIFFfree(buf);
         TIFFClose(tif);
     }
+    return created;
 }
 
-glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord) {
+glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
     if (texture_unit_index >= texture_unit_dinmension * texture_unit_dinmension) {
         texture_unit_index--;
-    } else {
+    } else if (!detailed) {
         int bl_coord_x_int = (int)bl_coord.x;
         int tr_coord_x_int = (int)tr_coord.x;
         int bl_coord_y_int = (int)bl_coord.y;
@@ -292,12 +308,18 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord) {
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
                         (j - bl_coord_x_int) * (texture_unit_size/scale) * texture_unit_size * texture_unit_dinmension +
                         (i - bl_coord_y_int) * (texture_unit_size/scale);
-                createLODDEM(j, i, scale, base_index_unit);
+                createLODDEM(glm::vec2(j, i), glm::vec2(j+1, i+1), scale, base_index_unit);
             }
+        }
+    } else {
+        int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
+                texture_unit_index % texture_unit_dinmension * texture_unit_size;
+        if (!createLODDEM(bl_coord, tr_coord, 1, base_index_unit)) {
+            return NULL;
         }
     }
     float delta = 1.0f/(float)texture_unit_dinmension;
-    glm::vec2 new_texture_unit_uv_base = glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
+    glm::vec2* new_texture_unit_uv_base = new glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
     texture_unit_index++;
     return new_texture_unit_uv_base;
 }
@@ -325,9 +347,14 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         glm::vec2 ml_coord = (tl_coord + bl_coord)/2.0f;
         glm::vec2 mr_coord = (tr_coord + br_coord)/2.0f;
 
-        if (level%2 == 0 && tr_coord.x-bl_coord.x>=1.0f && texture_unit_index < texture_units) {//TODO: Height map size def
-            bl_uv = new_texture_unit(bl_coord, tr_coord);
-            tr_uv = bl_uv + glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension);
+        if (level%2 == 0 && texture_unit_index < texture_units) {//TODO: Height map size def
+            float delta_coord = tr_coord.x-bl_coord.x;
+            bool detailed = delta_coord < 1.0f;
+            glm::vec2* temp_bl_uv = new_texture_unit(bl_coord, tr_coord, detailed);
+            if (temp_bl_uv != NULL) {
+                bl_uv = *temp_bl_uv;
+                tr_uv = bl_uv + glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension);
+            }
         }
 
         glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
