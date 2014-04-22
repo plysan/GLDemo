@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <tiffio.h>
 #include <glm/glm.hpp>
@@ -251,6 +252,7 @@ void genElementIndex() {
 bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale, int base_index_unit) {
     bool created = false;
     stringstream ss;
+    ss << std::setprecision(std::numeric_limits<float>::digits10+1);
     char ns = bl_coord.x<0.0f ? 's' : 'n';
     char ew = bl_coord.y<0.0f ? 'w' : 'e';
     if (bl_coord.x < 0.0f) {
