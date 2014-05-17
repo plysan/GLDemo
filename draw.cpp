@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <GL/glew.h>
-#include <GL/glfw3.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <thread>
@@ -35,7 +35,7 @@ int elemantIndexLengthForRendering = 0;
 int frameCounter = 0;
 int renderingBufferIndex = 0;
 
-void key_callback(GLFWwindow* window, int key, int action)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
