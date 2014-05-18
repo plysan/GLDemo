@@ -15,7 +15,7 @@ using namespace std;
 
 double PI = 3.1415926535;
 
-glm::vec3 calcPosFromCoord(float lat, float lng) {
+glm::vec3 calcFPosFromCoord(float lat, float lng) {
     lat = lat/180*localcons::pi;
     lng = lng/180*localcons::pi;
     return glm::vec3(
@@ -23,6 +23,16 @@ glm::vec3 calcPosFromCoord(float lat, float lng) {
             localcons::earth_radius * sin(lng),
             -localcons::earth_radius * cos(lng) * sin(lat)
             );
+}
+
+double* midPos3D(double *a, double *b) {
+    return new double[3] {(a[0] + b[0])/2, (a[1] + b[1])/2, (a[2] + b[2])/2};
+}
+
+void doubleToGlmVec3(glm::vec3 *result, double *value) {
+    result->x = value[0];
+    result->y = value[1];
+    result->z = value[2];
 }
 
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {

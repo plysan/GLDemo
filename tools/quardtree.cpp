@@ -24,8 +24,9 @@
 using namespace std;
 
 extern glm::vec3 viewPos;
+glm::vec3 vertex_offset;
 
-Node* node = NULL;
+Node* node = new Node;
 glm::vec3* result;
 glm::vec2* result_uv;
 static unsigned int* result_index;
@@ -69,15 +70,15 @@ glm::vec3* createQuardTreeNormal() {
     return result_normal;
 }
 
-void interpolatePos2D(glm::vec3 tl_pos, glm::vec3 bl_pos, glm::vec3 tr_pos, glm::vec3 br_pos, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
-    glm::vec3 mt_pos = (tl_pos + tr_pos)/2.0f;
-    glm::vec3 mb_pos = (bl_pos + br_pos)/2.0f;
-    glm::vec3 ml_pos = (bl_pos + tl_pos)/2.0f;
-    glm::vec3 mr_pos = (br_pos + tr_pos)/2.0f;
-    glm::vec3 mid_pos = (ml_pos + mr_pos)/2.0f;
-    result[mid_pos_index] = mid_pos;
-    result[mid_pos_index + unit_size] = mr_pos;
-    result[mid_pos_index + dinmension*unit_size] = mb_pos;
+void interpolatePos2D(double* tl_pos, double* bl_pos, double* tr_pos, double* br_pos, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
+    double* mt_pos = midPos3D(tl_pos, tr_pos);
+    double* mb_pos = midPos3D(bl_pos, br_pos);
+    double* ml_pos = midPos3D(bl_pos, tl_pos);
+    double* mr_pos = midPos3D(br_pos, tr_pos);
+    double* mid_pos = midPos3D(ml_pos, mr_pos);
+    doubleToGlmVec3(&result[mid_pos_index], mid_pos);
+    doubleToGlmVec3(&result[mid_pos_index + unit_size], mr_pos);
+    doubleToGlmVec3(&result[mid_pos_index + dinmension*unit_size], mb_pos);
 
     glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
     glm::vec2 mr_uv = glm::vec2(tr_uv.x, mid_uv.y);
@@ -96,9 +97,9 @@ void interpolatePos2D(glm::vec3 tl_pos, glm::vec3 bl_pos, glm::vec3 tr_pos, glm:
     }
 }
 
-void interpolatePos1D(glm::vec3 frst_pos, glm::vec3 lst_pos, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
-    glm::vec3 mid_pos = (frst_pos + lst_pos)/2.0f;
-    result[mid_pos_index] = mid_pos;
+void interpolatePos1D(double* frst_pos, double* lst_pos, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
+    double* mid_pos = midPos3D(frst_pos, lst_pos);
+    doubleToGlmVec3(&result[mid_pos_index], mid_pos);
     glm::vec2 mid_uv = (frst_uv + lst_uv)/2.0f;
     result_uv[mid_pos_index] = mid_uv;
     if (interval >= unit_size) {
@@ -107,25 +108,41 @@ void interpolatePos1D(glm::vec3 frst_pos, glm::vec3 lst_pos, glm::vec2 frst_uv, 
     }
 }
 
+void elevationOffset(glm::vec3 *result, double elevation_factor) {
+    result->x = ((double)result->x + (double)vertex_offset.x) * elevation_factor - (double)vertex_offset.x;
+    result->y = ((double)result->y + (double)vertex_offset.y) * elevation_factor - (double)vertex_offset.y;
+    result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
+}
+
+double* calcMDPosFromCoord(float lat, float lng) {
+    double latD = (double)lat/180*localcons::pi;
+    double lngD = (double)lng/180*localcons::pi;
+    return new double[3]{
+        (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
+        (double)localcons::earth_radius * std::sin(lngD) - vertex_offset.y,
+        (double)-localcons::earth_radius * std::cos(lngD) * std::sin(latD) - vertex_offset.z
+    };
+}
+
 void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv) {
     if (nodeIndex >= maxNodes) {
         return;
     }
     int baseIndex = nodeIndex * dinmension * dinmension;
-    glm::vec3 bl_pos = calcPosFromCoord(bl_coord.x, bl_coord.y);
-    glm::vec3 br_pos = calcPosFromCoord(bl_coord.x, tr_coord.y);
-    glm::vec3 tl_pos = calcPosFromCoord(tr_coord.x, bl_coord.y);
-    glm::vec3 tr_pos = calcPosFromCoord(tr_coord.x, tr_coord.y);
+    double* bl_pos = calcMDPosFromCoord(bl_coord.x, bl_coord.y);
+    double* br_pos = calcMDPosFromCoord(bl_coord.x, tr_coord.y);
+    double* tl_pos = calcMDPosFromCoord(tr_coord.x, bl_coord.y);
+    double* tr_pos = calcMDPosFromCoord(tr_coord.x, tr_coord.y);
     interpolatePos2D(tl_pos, bl_pos, tr_pos, br_pos, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
     interpolatePos1D(tl_pos, tr_pos, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
     interpolatePos1D(tl_pos, bl_pos, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
-    result[baseIndex] = tl_pos;
+    doubleToGlmVec3(&result[baseIndex], tl_pos);
     result_uv[baseIndex] = glm::vec2(bl_uv.x, tr_uv.y);
-    result[baseIndex + dinmension - 1] = tr_pos;
+    doubleToGlmVec3(&result[baseIndex + dinmension - 1], tr_pos);
     result_uv[baseIndex + dinmension - 1] = tr_uv;
-    result[baseIndex + dinmension * dinmension - 1] = br_pos;
+    doubleToGlmVec3(&result[baseIndex + dinmension * dinmension - 1], br_pos);
     result_uv[baseIndex + dinmension * dinmension - 1] = glm::vec2(tr_uv.x, bl_uv.y);
-    result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
+    doubleToGlmVec3(&result[baseIndex + dinmension * (dinmension - 1)], bl_pos);
     result_uv[baseIndex + dinmension * (dinmension - 1)] = bl_uv;
 
     int coords_spaned = (int)(tr_coord.x - bl_coord.x);
@@ -147,7 +164,8 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
             for (int i=0; i<dinmension; i++) {
                 TIFFReadEncodedStrip(tif, (int)((bl_coord_lat_texture_offset + (float)i/((float)dinmension - 1.0f) * (tr_coord.x - bl_coord.x)) * (float)texture_unit_size_dem), buf, TIFFStripSize(tif));
                 for (int j=0; j<dinmension; j++) {
-                    result[base_index++] *= (((float)(short)buf[(int)((bl_coord_lng_texture_offset + (float)j/((float)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (float)texture_unit_size_dem)])/3000000.0f + 1.0f);
+                    double elevation_factor = (((double)(short)buf[(int)((bl_coord_lng_texture_offset + (double)j/((double)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (double)texture_unit_size_dem)])/3000000.0f + 1.0f);
+                    elevationOffset(&result[base_index++], elevation_factor);
                 }
             }
             TIFFClose(tif);
@@ -182,12 +200,12 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                         } else {
                             continue;
                         }
-                        result[base_index_unit] *= (((float)(short)buf[0])/3000000.0f + 1.0f);
+                        elevationOffset(&result[base_index_unit], (((double)(short)buf[0])/3000000.0f + 1.0f));
                         int last_index_row = base_index_unit;
                         for (float k=scale; k<((float)(TIFFStripSize(tif)))/(float)sizeof(short); k+=scale) {
                             if (base_index_unit + (int)(k/scale) != last_index_row) {
                                 // The index of result cannot be plus one in every loop, but cast from float, why?
-                                result[base_index_unit + (int)(k/scale)] *= (((float)(short)buf[(int)(k)])/3000000.0f + 1.0f);
+                                elevationOffset(&result[base_index_unit + (int)(k/scale)], (((double)(short)buf[(int)(k)])/3000000.0f + 1.0f));
                                 last_index_row = base_index_unit + (int)(k/scale);
                             }
                         }
@@ -333,14 +351,14 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     node->lat = mid_coord.x;
     node->lng = mid_coord.y;
 
-    glm::vec3 bl_pos = calcPosFromCoord(bl_coord.x, bl_coord.y);
-    glm::vec3 tr_pos = calcPosFromCoord(tr_coord.x, tr_coord.y);
+    glm::vec3 bl_pos = calcFPosFromCoord(bl_coord.x, bl_coord.y);
+    glm::vec3 tr_pos = calcFPosFromCoord(tr_coord.x, tr_coord.y);
     float nodeSize = glm::length(bl_pos - tr_pos);
     if (nodeSize < minNodeSize) {
         addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv);
         return;
     }
-    if (nodeSize > glm::length((bl_pos + tr_pos)/2.0f - viewPos) || nodeSize > maxNodeSize) {
+    if (nodeSize > glm::length((bl_pos + tr_pos)/2.0f - vertex_offset - viewPos) || nodeSize > maxNodeSize) {
         //TODO: need optimizing like uv...
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
         glm::vec2 br_coord = glm::vec2(bl_coord.x, tr_coord.y);

@@ -8,4 +8,4 @@ class Object {
     glm::vec3 nextPos();
 };
 extern glm::vec3* using_buffer_data;
-
+extern glm::vec3 using_vertex_offset;

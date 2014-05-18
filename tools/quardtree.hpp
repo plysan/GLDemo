@@ -3,6 +3,7 @@ extern int dinmension;
 extern int maxNodes;
 extern int vertexBufferSize;
 extern int ele_index_size;
+extern glm::vec3 vertex_offset;
 
 glm::vec3* createQuardTreePos();
 glm::vec2* createQuardTreeUV();

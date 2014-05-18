@@ -6,6 +6,7 @@
 #include "constants.hpp"
 #include "tools.hpp"
 #include "physics.hpp"
+#include "quardtree.hpp"
 
 extern GLFWwindow* window;
 extern short windowW, windowH;
@@ -35,9 +36,9 @@ void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
 }
 
 void setPosCoord(float lat, float lng, float height){
-    viewPos = calcPosFromCoord(lat, lng) * (height+localcons::earth_radius)/localcons::earth_radius;
+    vertex_offset = calcFPosFromCoord(lat, lng) * (height+localcons::earth_radius)/localcons::earth_radius;
     viewObj = new Object(viewPos);
-    up = glm::normalize(viewPos);
+    up = glm::normalize(vertex_offset);
     printf("viewPos: (%f, %f, %f)\n", viewPos.x, viewPos.y, viewPos.z);
 }
 
@@ -67,6 +68,7 @@ void computeMatricesFromInputs(){
     direction = glm::rotate(direction, verticalAngle, horotateaxis);
     glm::vec3 right = glm::cross(direction, up);
 
+    viewObj->position = viewPos;
 	// Move forward
 	if (glfwGetKey( window, GLFW_KEY_W ) == GLFW_PRESS){
 		viewObj->velocity += direction * deltaTime * speed;

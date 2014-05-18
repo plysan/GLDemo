@@ -10,6 +10,8 @@ float gravity = 0.1f;
 float timeStep = 0.01f;
 
 glm::vec3* using_buffer_data;
+// indicates the offset of the rendering buffer
+glm::vec3 using_vertex_offset;
 
 Object::Object(glm::vec3 pos) {
     position = pos;
@@ -65,13 +67,13 @@ glm::vec3 Object::nextPos() {
         return glm::vec3(0.0f);
     }
     int using_buffer_data_index = 0;
-    glm::vec3 using_buffer_dataNormal = getResultNormalFromCoord(calcCoordFromPos(position), &using_buffer_data_index);
+    glm::vec3 using_buffer_dataNormal = getResultNormalFromCoord(calcCoordFromPos(position + using_vertex_offset), &using_buffer_data_index);
     glm::vec3 facePoint_to_pos_vector = position - using_buffer_data[using_buffer_data_index];
     if (glm::dot(facePoint_to_pos_vector, using_buffer_dataNormal) < 0.0f) {
         position += -velocity * timeStep;
         velocity = glm::reflect(velocity, using_buffer_dataNormal) * 0.9f;
     } else {
-        velocity += gravity * timeStep * glm::normalize(-position);
+        velocity += gravity * timeStep * glm::normalize(-position - vertex_offset);
         position += velocity * timeStep;
     }
     return position;

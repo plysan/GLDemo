@@ -14,6 +14,12 @@
 #include "tools/physics.hpp"
 
 extern glm::vec3 viewPos;
+// to store viewPos upon quardtree update
+glm::vec3 viewPos_cached;
+// used to store vertex offset of the updating buffer and update to physics in the next buffer update
+glm::vec3 vertex_offset_snap;
+
+Node* new_node = NULL;
 
 GLFWwindow* window;
 short windowW = 1366, windowH = 768;
@@ -55,7 +61,10 @@ void updateData()
         quardTreeLength=0;
         elemantIndexLength=0;
         clock_t before = clock();
-        Node* new_node = new Node;
+        viewPos_cached = viewPos;
+        vertex_offset += viewPos_cached;
+        vertex_offset_snap = vertex_offset;
+        new_node = new Node;
         createQuardTree(
             glm::vec2(19.0f, -157.0f),
             glm::vec2(21.0f, -155.0f),
@@ -71,9 +80,7 @@ void updateData()
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d\n", quardTreeLength, elemantIndexLength);
 
-        std::copy(&g_mapped_vertex_buffer_data[0], &g_mapped_vertex_buffer_data[quardTreeLength], g_vertex_buffer_data[renderingBufferIndex]);
-        using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
-        node = new_node;
+        std::copy(&g_mapped_vertex_buffer_data[0], &g_mapped_vertex_buffer_data[quardTreeLength], g_vertex_buffer_data[(renderingBufferIndex+1)%2]);
 
         unmapping = true;
         updating = false;
@@ -232,6 +239,11 @@ int main( void )
 	        glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
 
+            viewPos = viewPos - viewPos_cached;
+            using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
+            using_vertex_offset = vertex_offset_snap;
+            node = new_node;
+
             updating = true;
         }
         frameCounter++;
@@ -262,7 +274,7 @@ int main( void )
         glUniformMatrix4fv(matrixMVPID, 1, GL_FALSE, &MVP[0][0]);
         glUniformMatrix4fv(matrixMID, 1, GL_FALSE, &M[0][0]);
         glUniformMatrix4fv(matrixVID, 1, GL_FALSE, &V[0][0]);
-        glm::vec3 lightPos = 1000000.0f*calcPosFromCoord(20.0f, -158.0f);
+        glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
         glUniform3f(LightPositionID, lightPos.x, lightPos.y, lightPos.z);
 
 		//glDrawArrays(GL_POINTS, 0, quardTreeLength);
