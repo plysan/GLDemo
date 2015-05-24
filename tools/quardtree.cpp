@@ -228,31 +228,43 @@ void genElementIndex() {
         int baseIndex_copy = idx * dinmension * dinmension;
         //printf("ele: %d, idx: %d ~\n", base_ele_index, baseIndex_copy);
         result_index[base_ele_index++] = baseIndex_copy;
-        for (int i=0; i<dinmension-1; i++) {
+        for (int i=0; i<dinmension; i++) {
             if (i%2 == 0) {
                 int normal_index_strip = base_ele_index;
-                for (int j=0; j<dinmension; j++) {
-                    result_index[base_ele_index++] = baseIndex_copy;
-                    result_index[base_ele_index++] = baseIndex_copy++ + dinmension;
-                }
-                baseIndex_copy += (dinmension - 1);
-
-                result_normal[result_index[normal_index_strip]] =
-                    glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+2]] - result[result_index[normal_index_strip]]);
-                normal_index_strip++;
-                for (int i=0; i<dinmension*2-2; i++) {
-                    if (i%2 == 0) {
+                if (i == dinmension - 1) {
+                    // fill the last row of node with normal data
+                    normal_index_strip--;
+                    for (int i=0; i<dinmension-1; i++) {
                         result_normal[result_index[normal_index_strip]] =
-                            glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]]);
-                        normal_index_strip++;
-                    } else {
-                        result_normal[result_index[normal_index_strip]] =
-                            glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]]);
-                        normal_index_strip++;
+                            glm::cross(result[result_index[normal_index_strip-2]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]]);
+                        normal_index_strip -= 2;
                     }
+                    result_normal[result_index[normal_index_strip]] =
+                        glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]]);
+                } else {
+                    for (int j=0; j<dinmension; j++) {
+                        result_index[base_ele_index++] = baseIndex_copy;
+                        result_index[base_ele_index++] = baseIndex_copy++ + dinmension;
+                    }
+                    baseIndex_copy += (dinmension - 1);
+
+                    result_normal[result_index[normal_index_strip]] =
+                        glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+2]] - result[result_index[normal_index_strip]]);
+                    normal_index_strip++;
+                    for (int i=0; i<dinmension*2-2; i++) {
+                        if (i%2 == 0) {
+                            result_normal[result_index[normal_index_strip]] =
+                                glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]]);
+                            normal_index_strip++;
+                        } else {
+                            result_normal[result_index[normal_index_strip]] =
+                                glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]]);
+                            normal_index_strip++;
+                        }
+                    }
+                    result_normal[result_index[normal_index_strip]] =
+                        glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-2]] - result[result_index[normal_index_strip]]);
                 }
-                result_normal[result_index[normal_index_strip]] =
-                    glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-2]] - result[result_index[normal_index_strip]]);
             } else {
                 for (int j=0; j<dinmension; j++) {
                     result_index[base_ele_index++] = baseIndex_copy;
