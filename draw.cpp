@@ -89,46 +89,46 @@ void updateData()
 
 int main( void )
 {
-	// Initialise GLFW
-	if( !glfwInit() )
-	{
-		fprintf( stderr, "Failed to initialize GLFW\n" );
-		return -1;
-	}
+    // Initialise GLFW
+    if( !glfwInit() )
+    {
+        fprintf( stderr, "Failed to initialize GLFW\n" );
+        return -1;
+    }
 
-	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow( windowW, windowH, "holly", NULL, NULL );
-	if( !window )
-	{
-		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
-		glfwTerminate();
-		return -1;
-	}
+    if( !window )
+    {
+        fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
+        glfwTerminate();
+        return -1;
+    }
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
     glfwSetScrollCallback(window, sroll_callback);
 
-	glewExperimental = true; // Needed for core profile
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		return -1;
-	}
+    glewExperimental = true; // Needed for core profile
+    if (glewInit() != GLEW_OK) {
+        fprintf(stderr, "Failed to initialize GLEW\n");
+        return -1;
+    }
 
     glfwSetCursorPos(window, windowW/2, windowH/2);
-	glClearColor(0.0f, 0.0f, 0.1f, 0.0f);
+    glClearColor(0.0f, 0.0f, 0.1f, 0.0f);
     glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
 
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
+    GLuint VertexArrayID;
+    glGenVertexArrays(1, &VertexArrayID);
+    glBindVertexArray(VertexArrayID);
 
-	// Create and compile our GLSL program from the shaders
-	GLuint programID = LoadShaders( "tools/VertexShader", "tools/FragmentShader" );
+    // Create and compile our GLSL program from the shaders
+    GLuint programID = LoadShaders( "tools/VertexShader", "tools/FragmentShader" );
     GLuint matrixMVPID = glGetUniformLocation( programID, "MVP" );
     GLuint matrixMID = glGetUniformLocation( programID, "M" );
     GLuint matrixVID = glGetUniformLocation( programID, "V" );
@@ -152,31 +152,31 @@ int main( void )
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[2]);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, texture_array, GL_STREAM_DRAW);
 
-	GLuint* vertexbuffer = new GLuint[2];
-	glGenBuffers(2, vertexbuffer);
+    GLuint* vertexbuffer = new GLuint[2];
+    glGenBuffers(2, vertexbuffer);
     g_vertex_buffer_data = new glm::vec3*[2];
     g_vertex_buffer_data[0] = createQuardTreePos();
     g_vertex_buffer_data[1] = createQuardTreePos();
     using_buffer_data = g_vertex_buffer_data[0];
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_buffer_data[0], GL_STREAM_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_buffer_data[1], GL_STREAM_DRAW);
 
     GLuint* uvbuffer = new GLuint[2];
-	glGenBuffers(2, uvbuffer);
+    glGenBuffers(2, uvbuffer);
     g_vertex_uv_data = createQuardTreeUV();
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
 
     GLuint* normalbuffer = new GLuint[2];
-	glGenBuffers(2, normalbuffer);
+    glGenBuffers(2, normalbuffer);
     g_vertex_normal_data = createQuardTreeNormal();
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[1]);
+    glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
 
     GLuint* elementBuffer = new GLuint[2];
@@ -192,14 +192,14 @@ int main( void )
 
     glUseProgram(programID);
 
-	glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
     glActiveTexture(GL_TEXTURE0);
     GLuint TextureUID  = glGetUniformLocation(programID, "myTextureSampler");
     glUniform1i(TextureUID, 0);
 
-	do{
+    do{
         if (frameCounter%500 == 0 && updating == false) {
             elemantIndexLengthForRendering = elemantIndexLength;
 
@@ -231,12 +231,12 @@ int main( void )
             //use the buffers that is updated
             renderingBufferIndex = (renderingBufferIndex+1)%2;
             glBindVertexArray(VertexArrayID);
-	        glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
-	        glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
-	        glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-	        glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0,(void*)0 );
-	        glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
-	        glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
+            glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
+            glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
+            glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
+            glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0,(void*)0 );
+            glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
+            glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
 
             viewPos = viewPos - viewPos_cached;
@@ -265,7 +265,7 @@ int main( void )
             renderingBufferIndex = (renderingBufferIndex+1)%2;
         }
 
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
         computeMatricesFromInputs();
         glm::mat4 M = glm::mat4(1.0f);
@@ -277,30 +277,30 @@ int main( void )
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
         glUniform3f(LightPositionID, lightPos.x, lightPos.y, lightPos.z);
 
-		//glDrawArrays(GL_POINTS, 0, quardTreeLength);
+        //glDrawArrays(GL_POINTS, 0, quardTreeLength);
         glDrawElements(GL_TRIANGLE_STRIP, elemantIndexLengthForRendering, GL_UNSIGNED_INT, (void*)0);
 
-		// Swap buffers
-		glfwSwapBuffers(window);
+        // Swap buffers
+        glfwSwapBuffers(window);
         glfwPollEvents();
 
-	} // Check if the ESC key was pressed or the window was closed
-	while( !glfwWindowShouldClose(window) );
+    } // Check if the ESC key was pressed or the window was closed
+    while( !glfwWindowShouldClose(window) );
 
     terminating = true;
     while(terminating) {
         std::this_thread::sleep_for (std::chrono::microseconds(100));
     }
-	// Close OpenGL window and terminate GLFW
-	glfwTerminate();
+    // Close OpenGL window and terminate GLFW
+    glfwTerminate();
 
-	// Cleanup VBO
-	glDeleteBuffers(2, vertexbuffer);
-	glDeleteBuffers(2, uvbuffer);
-	glDeleteBuffers(2, normalbuffer);
-	glDeleteBuffers(2, elementBuffer);
-	glDeleteVertexArrays(1, &VertexArrayID); 
+    // Cleanup VBO
+    glDeleteBuffers(2, vertexbuffer);
+    glDeleteBuffers(2, uvbuffer);
+    glDeleteBuffers(2, normalbuffer);
+    glDeleteBuffers(2, elementBuffer);
+    glDeleteVertexArrays(1, &VertexArrayID);
 
-	return 0;
+    return 0;
 }
 
