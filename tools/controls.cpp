@@ -38,11 +38,12 @@ void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
 void setPosCoord(float lat, float lng, float height){
     vertex_offset = calcFPosFromCoord(lat, lng) * (height+localcons::earth_radius)/localcons::earth_radius;
     viewObj = new Object(viewPos);
-    up = glm::normalize(vertex_offset);
     printf("viewPos: (%f, %f, %f)\n", viewPos.x, viewPos.y, viewPos.z);
 }
 
 void computeMatricesFromInputs(){
+
+    up = glm::normalize(vertex_offset);
 
 	// glfwGetTime is called only once, the first time this function is called
 	static double lastTime = glfwGetTime();
