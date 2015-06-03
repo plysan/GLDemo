@@ -50,6 +50,11 @@ static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
 static uint32* texture;
 static int texture_unit_index = 0;
 
+static glm::vec2 g_bl_coord = glm::vec2();
+static glm::vec2 g_tr_coord = glm::vec2();
+
+static glm::vec2 tr_coord_sqrt = glm::vec2();
+
 glm::vec3* createQuardTreePos() {
     result = new glm::vec3[maxNodes * dinmension * dinmension];
     return result;
@@ -362,6 +367,11 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
 }
 
 void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node* node) {
+    if (bl_coord.x<g_bl_coord.x || bl_coord.y<g_bl_coord.y || tr_coord.x>g_tr_coord.x || tr_coord.y>g_tr_coord.y) {
+        if (!(bl_coord.x==g_bl_coord.x && tr_coord_sqrt.y==g_tr_coord.y || bl_coord.y==g_bl_coord.y && tr_coord_sqrt.x==g_tr_coord.x)) {
+            return;
+        }
+    }
     node->start_index = nodeIndex * dinmension * dinmension;
     node->nodeSize = tr_coord.x - bl_coord.x;
     glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
@@ -442,7 +452,17 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     new_node->br = NULL;
     new_node->tl = NULL;
     new_node->tr = NULL;
-    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, new_node);
+
+    g_bl_coord = bl_coord;
+    g_tr_coord = tr_coord;
+    float cood_span_x = tr_coord.x - bl_coord.x;
+    float cood_span_y = tr_coord.y - bl_coord.y;
+    if (cood_span_x >= cood_span_y) {
+        tr_coord_sqrt = glm::vec2(bl_coord.x+cood_span_x, bl_coord.y+cood_span_x);
+    } else {
+        tr_coord_sqrt = glm::vec2(bl_coord.x+cood_span_y, bl_coord.y+cood_span_y);
+    }
+    selectNode(bl_coord, tr_coord_sqrt, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, new_node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
