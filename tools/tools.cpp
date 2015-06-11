@@ -20,8 +20,8 @@ glm::vec3 calcFPosFromCoord(float lat, float lng) {
     lng = lng/180*localcons::pi;
     return glm::vec3(
             localcons::earth_radius * cos(lat) * cos(lng),
-            localcons::earth_radius * sin(lng),
-            -localcons::earth_radius * cos(lng) * sin(lat)
+            localcons::earth_radius * sin(lat),
+            -localcons::earth_radius * cos(lat) * sin(lng)
             );
 }
 
@@ -37,9 +37,12 @@ void doubleToGlmVec3(glm::vec3 *result, double *value) {
 
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
     float radius = glm::length(pos);
-    float lng = -localcons::pi - asin(pos.y/radius);
-    float lat = acos(pos.x/radius/cos(lng))/localcons::pi*180.0f;
-    return glm::vec2(lat, lng/localcons::pi*180.0f);
+    float lat = asin(pos.y/radius);
+    float lng = acos(pos.x/radius/cos(lat))/localcons::pi*180.0f;
+    if (pos.z > 0.0f) {
+        lng = -lng;
+    }
+    return glm::vec2(lat/localcons::pi*180.0f, lng);
 }
 
 GLuint readTiffImage(char *name){

@@ -124,8 +124,8 @@ double* calcMDPosFromCoord(float lat, float lng) {
     double lngD = (double)lng/180*localcons::pi;
     return new double[3]{
         (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(lngD) - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(lngD) * std::sin(latD) - vertex_offset.z
+        (double)localcons::earth_radius * std::sin(latD) - vertex_offset.y,
+        (double)-localcons::earth_radius * std::cos(latD) * std::sin(lngD) - vertex_offset.z
     };
 }
 
