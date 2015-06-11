@@ -129,8 +129,9 @@ double* calcMDPosFromCoord(float lat, float lng) {
     };
 }
 
-void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv) {
+void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
     if (nodeIndex >= maxNodes) {
+        *node = NULL;
         return;
     }
     int baseIndex = nodeIndex * dinmension * dinmension;
@@ -366,23 +367,28 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
     return new_texture_unit_uv_base;
 }
 
-void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node* node) {
+void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node) {
     if (bl_coord.x<g_bl_coord.x || bl_coord.y<g_bl_coord.y || tr_coord.x>g_tr_coord.x || tr_coord.y>g_tr_coord.y) {
         if (!(bl_coord.x==g_bl_coord.x && tr_coord_sqrt.y==g_tr_coord.y || bl_coord.y==g_bl_coord.y && tr_coord_sqrt.x==g_tr_coord.x)) {
+            *node = NULL;
             return;
         }
     }
-    node->start_index = nodeIndex * dinmension * dinmension;
-    node->nodeSize = tr_coord.x - bl_coord.x;
+    (*node)->bl = NULL;
+    (*node)->br = NULL;
+    (*node)->tl = NULL;
+    (*node)->tr = NULL;
+    (*node)->start_index = nodeIndex * dinmension * dinmension;
+    (*node)->nodeSize = tr_coord.x - bl_coord.x;
     glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
-    node->lat = mid_coord.x;
-    node->lng = mid_coord.y;
+    (*node)->lat = mid_coord.x;
+    (*node)->lng = mid_coord.y;
 
     glm::vec3 bl_pos = calcFPosFromCoord(bl_coord.x, bl_coord.y);
     glm::vec3 tr_pos = calcFPosFromCoord(tr_coord.x, tr_coord.y);
     float nodeSize = glm::length(bl_pos - tr_pos);
     if (nodeSize < minNodeSize) {
-        addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv);
+        addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
         return;
     }
     if (nodeSize > glm::length((bl_pos + tr_pos)/2.0f - vertex_offset - viewPos) || nodeSize > maxNodeSize) {
@@ -408,36 +414,20 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
 
         level++;
 
-        node->bl = new Node;
-        node->bl->bl = NULL;
-        node->bl->tl = NULL;
-        node->bl->br = NULL;
-        node->bl->br = NULL;
-        node->tl = new Node;
-        node->tl->bl = NULL;
-        node->tl->tl = NULL;
-        node->tl->br = NULL;
-        node->tl->br = NULL;
-        node->br = new Node;
-        node->br->bl = NULL;
-        node->br->tl = NULL;
-        node->br->br = NULL;
-        node->br->br = NULL;
-        node->tr = new Node;
-        node->tr->bl = NULL;
-        node->tr->tl = NULL;
-        node->tr->br = NULL;
-        node->tr->br = NULL;
-        selectNode(ml_coord, mt_coord, glm::vec2(bl_uv.x, mid_uv.y), glm::vec2(mid_uv.x, tr_uv.y), level, node->tl);
-        selectNode(bl_coord, mid_coord, bl_uv, mid_uv, level, node->bl);
-        selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level, node->tr);
-        selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level, node->br);
+        (*node)->tl = new Node;
+        selectNode(ml_coord, mt_coord, glm::vec2(bl_uv.x, mid_uv.y), glm::vec2(mid_uv.x, tr_uv.y), level, &((*node)->tl));
+        (*node)->bl = new Node;
+        selectNode(bl_coord, mid_coord, bl_uv, mid_uv, level, &((*node)->bl));
+        (*node)->tr = new Node;
+        selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level, &((*node)->tr));
+        (*node)->br = new Node;
+        selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level, &((*node)->br));
     } else {
-        addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv);
+        addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array, Node* new_node) {
+void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array, Node** new_node) {
     TIFFSetWarningHandler(NULL);
     TIFFSetErrorHandler(NULL);
     nodeIndex = *index / dinmension / dinmension;
@@ -448,10 +438,6 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
-    new_node->bl = NULL;
-    new_node->br = NULL;
-    new_node->tl = NULL;
-    new_node->tr = NULL;
 
     g_bl_coord = bl_coord;
     g_tr_coord = tr_coord;

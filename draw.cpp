@@ -75,7 +75,7 @@ void updateData()
             &elemantIndexLength,
             g_vertex_element_data,
             texture_array,
-            new_node
+            &new_node
             );
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d\n", quardTreeLength, elemantIndexLength);
