@@ -21,18 +21,20 @@ Object::Object(glm::vec3 pos) {
 
 glm::vec3 getResultNormalFromCoord(glm::vec2 coord, int* rIndex) {
     Node* target_node = node;
-    while (target_node->bl != NULL) {
+    Node* target_node_suspect = node;
+    while (target_node_suspect != NULL) {
+        target_node = target_node_suspect;
         if (target_node->lat > coord.x) {
             if (target_node->lng > coord.y) {
-                target_node = target_node->bl;
+                target_node_suspect = target_node->bl;
             } else {
-                target_node = target_node->br;
+                target_node_suspect = target_node->br;
             }
         } else {
             if (target_node->lng > coord.y) {
-                target_node = target_node->tl;
+                target_node_suspect = target_node->tl;
             } else {
-                target_node = target_node->tr;
+                target_node_suspect = target_node->tr;
             }
         }
     }
