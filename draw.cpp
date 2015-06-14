@@ -135,6 +135,8 @@ int main( void )
     GLuint LightPositionID = glGetUniformLocation( programID, "LightPosition_worldspace" );
 
     setPosCoord(20.0f, -156.0f, 0.7f);
+    using_vertex_offset = vertex_offset;
+    vertex_offset_snap = using_vertex_offset;
 
     texture_array = new glm::detail::uint32[2915*2915*4];
     GLuint textureID;

@@ -43,7 +43,7 @@ void setPosCoord(float lat, float lng, float height){
 
 void computeMatricesFromInputs(){
 
-    up = glm::normalize(vertex_offset);
+    up = glm::normalize(using_vertex_offset + viewPos);
 
     // glfwGetTime is called only once, the first time this function is called
     static double lastTime = glfwGetTime();
