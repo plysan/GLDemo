@@ -78,7 +78,7 @@ void updateData()
             &new_node
             );
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
-        printf("points: %d, indices: %d\n", quardTreeLength, elemantIndexLength);
+        printf("points: %d, indices: %d, nodes:%d\n", quardTreeLength, elemantIndexLength, nodeIndex);
 
         std::copy(&g_mapped_vertex_buffer_data[0], &g_mapped_vertex_buffer_data[quardTreeLength], g_vertex_buffer_data[(renderingBufferIndex+1)%2]);
 

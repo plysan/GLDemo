@@ -38,7 +38,7 @@ static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
 int maxNodes = 100;
 int vertexBufferSize = dinmension*dinmension*maxNodes;
 int ele_index_size = maxNodes*ele_index_node_size;
-static int nodeIndex = 0;
+int nodeIndex = 0;
 //TODO not static
 static float minNodeSize = 1.0f;
 static float maxNodeSize = 100.0f;
