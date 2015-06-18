@@ -36,8 +36,8 @@ void doubleToGlmVec3(glm::vec3 *result, double *value) {
 }
 
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
-    float radius = glm::length(pos);
-    float lat = asin(pos.y/radius)/localcons::pi*180.0f;
+    float radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
+    float lat = atan(pos.y/radius_xz)/localcons::pi*180.0f;
     float lng = -atan(pos.z/pos.x);
     if (pos.x < 0.0f) {
         if (lng < 0.0f) {
