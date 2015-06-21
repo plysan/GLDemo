@@ -178,7 +178,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         }
     } else {
         // dinmension covers points on both edges of node, so we need to -1
-        float scale = (float)texture_unit_size_dem/(float)((dinmension-1)/coords_spaned);
+        float scale = (float)texture_unit_size_dem/((float)(dinmension-1)/coords_spaned);
         for (int i=(int)bl_coord.x; i<(int)tr_coord.x; i++) {
             for (int j=(int)bl_coord.y; j<(int)tr_coord.y; j++) {
                 //TODO lat/lng organization in node array ?
