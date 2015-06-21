@@ -11,3 +11,7 @@ To run the demo, you currently need to solve related library
 dependency yourself, and execute:
 1. g++ -o draw draw.cpp tools/*.cpp -lGL -ltiff -lGLEW -lglfw -std=c++0x -lpthread
 2. ./draw
+
+**Preview of the rendeing for hawaii islands:**
+![](https://raw.githubusercontent.com/plysan/GLDemo/master/demo.jpg)
+
