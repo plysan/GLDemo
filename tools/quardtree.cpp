@@ -365,7 +365,6 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
 
 void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node) {
     if (tr_coord.x-bl_coord.x==0 || tr_coord.y-bl_coord.y==0) {
-        printf("NULL\n");
         *node = NULL;
         return;
     }
