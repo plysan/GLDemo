@@ -50,11 +50,6 @@ static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
 static uint32* texture;
 static int texture_unit_index = 0;
 
-static glm::vec2 g_bl_coord = glm::vec2();
-static glm::vec2 g_tr_coord = glm::vec2();
-
-static glm::vec2 tr_coord_sqrt = glm::vec2();
-
 glm::vec3* createQuardTreePos() {
     result = new glm::vec3[maxNodes * dinmension * dinmension];
     return result;
@@ -285,7 +280,7 @@ void genElementIndex() {
     }
 }
 
-bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale, int base_index_unit) {
+bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
     bool created = false;
     stringstream ss;
     ss << std::setprecision(std::numeric_limits<float>::digits10+1);
@@ -321,12 +316,12 @@ bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale, int base_in
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
         uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
         int index = 0;
-        for (int strip=TIFFNumberOfStrips(tif)-1; strip>-1; strip-=scale) {
+        for (int strip=TIFFNumberOfStrips(tif)-1; strip>-1; strip-=scale_y) {
             base_index_unit += texture_unit_size * texture_unit_dinmension;
             TIFFReadRGBAStrip(tif, strip, buf);
-            for (int i=0; i<TIFFStripSize(tif)/sizeof(uint32); i+=scale) {
+            for (int i=0; i<TIFFStripSize(tif)/sizeof(uint32); i+=scale_x) {
                 uint32 color = buf[i];
-                texture[base_index_unit + i/scale] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+                texture[base_index_unit + i/scale_x] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
             }
         }
         _TIFFfree(buf);
@@ -343,21 +338,22 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
         int tr_coord_x_int = (int)tr_coord.x;
         int bl_coord_y_int = (int)bl_coord.y;
         int tr_coord_y_int = (int)tr_coord.y;
-        int scale = tr_coord_x_int - bl_coord_x_int;
+        int scale_y = tr_coord_x_int - bl_coord_x_int;
+        int scale_x = tr_coord_y_int - bl_coord_y_int;
         for (int i=bl_coord_y_int; i<tr_coord_y_int; i++) {
             for (int j=bl_coord_x_int; j<tr_coord_x_int; j++) {
                 int base_index_unit =
                         (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
-                        (j - bl_coord_x_int) * (texture_unit_size/scale) * texture_unit_size * texture_unit_dinmension +
-                        (i - bl_coord_y_int) * (texture_unit_size/scale);
-                createLODDEM(glm::vec2(j, i), glm::vec2(j+1, i+1), scale, base_index_unit);
+                        (j - bl_coord_x_int) * (texture_unit_size/scale_y) * texture_unit_size * texture_unit_dinmension +
+                        (i - bl_coord_y_int) * (texture_unit_size/scale_x);
+                createLODDEM(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit);
             }
         }
     } else {
         int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
                 texture_unit_index % texture_unit_dinmension * texture_unit_size;
-        if (!createLODDEM(bl_coord, tr_coord, 1, base_index_unit)) {
+        if (!createLODDEM(bl_coord, tr_coord, 1, 1, base_index_unit)) {
             return NULL;
         }
     }
@@ -368,11 +364,10 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
 }
 
 void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node) {
-    if (bl_coord.x<g_bl_coord.x || bl_coord.y<g_bl_coord.y || tr_coord.x>g_tr_coord.x || tr_coord.y>g_tr_coord.y) {
-        if (!(bl_coord.x==g_bl_coord.x && tr_coord_sqrt.y==g_tr_coord.y || bl_coord.y==g_bl_coord.y && tr_coord_sqrt.x==g_tr_coord.x)) {
-            *node = NULL;
-            return;
-        }
+    if (tr_coord.x-bl_coord.x==0 || tr_coord.y-bl_coord.y==0) {
+        printf("NULL\n");
+        *node = NULL;
+        return;
     }
     (*node)->bl = NULL;
     (*node)->br = NULL;
@@ -380,7 +375,12 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     (*node)->tr = NULL;
     (*node)->start_index = nodeIndex * dinmension * dinmension;
     (*node)->nodeSize = tr_coord.x - bl_coord.x;
-    glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
+    glm::vec2 mid_coord;
+    if (((int)(tr_coord.x-bl_coord.x))>1 || ((int)(tr_coord.y-bl_coord.y))>1) {
+        mid_coord = glm::vec2(bl_coord.x + ((int)(tr_coord.x-bl_coord.x))/2, bl_coord.y + ((int)(tr_coord.y-bl_coord.y))/2);
+    } else {
+        mid_coord = (bl_coord + tr_coord)/2.0f;
+    }
     (*node)->lat = mid_coord.x;
     (*node)->lng = mid_coord.y;
 
@@ -392,13 +392,12 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         return;
     }
     if (nodeSize > glm::length((bl_pos + tr_pos)/2.0f - vertex_offset - viewPos) || nodeSize > maxNodeSize) {
-        //TODO: need optimizing like uv...
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
         glm::vec2 br_coord = glm::vec2(bl_coord.x, tr_coord.y);
-        glm::vec2 mt_coord = (tl_coord + tr_coord)/2.0f;
-        glm::vec2 mb_coord = (bl_coord + br_coord)/2.0f;
-        glm::vec2 ml_coord = (tl_coord + bl_coord)/2.0f;
-        glm::vec2 mr_coord = (tr_coord + br_coord)/2.0f;
+        glm::vec2 mt_coord = glm::vec2(tr_coord.x, mid_coord.y);
+        glm::vec2 mb_coord = glm::vec2(bl_coord.x, mid_coord.y);
+        glm::vec2 ml_coord = glm::vec2(mid_coord.x, bl_coord.y);
+        glm::vec2 mr_coord = glm::vec2(mid_coord.x, tr_coord.y);
 
         if (level%2 == 0 && texture_unit_index < texture_units) {//TODO: Height map size def
             float delta_coord = tr_coord.x-bl_coord.x;
@@ -410,7 +409,9 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
             }
         }
 
-        glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
+        glm::vec2 mid_uv = glm::vec2();
+        mid_uv.x = bl_uv.x + (tr_uv.x-bl_uv.x)*(mid_coord.y-bl_coord.y)/(tr_coord.y-bl_coord.y);
+        mid_uv.y = bl_uv.y + (tr_uv.y-bl_uv.y)*(mid_coord.x-bl_coord.x)/(tr_coord.x-bl_coord.x);
 
         level++;
 
@@ -438,17 +439,7 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
-
-    g_bl_coord = bl_coord;
-    g_tr_coord = tr_coord;
-    float cood_span_x = tr_coord.x - bl_coord.x;
-    float cood_span_y = tr_coord.y - bl_coord.y;
-    if (cood_span_x >= cood_span_y) {
-        tr_coord_sqrt = glm::vec2(bl_coord.x+cood_span_x, bl_coord.y+cood_span_x);
-    } else {
-        tr_coord_sqrt = glm::vec2(bl_coord.x+cood_span_y, bl_coord.y+cood_span_y);
-    }
-    selectNode(bl_coord, tr_coord_sqrt, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, new_node);
+    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, new_node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
