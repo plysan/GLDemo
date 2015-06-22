@@ -194,7 +194,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
                     short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
                     int last_index_strip = -1;
-                    for (float strip=0.0f; strip<(float)texture_unit_size_dem; strip+=scale) {
+                    for (float strip=0.0f; strip<(float)TIFFNumberOfStrips(tif); strip+=scale) {
                         if ((int)(strip/scale) != last_index_strip) {
                             TIFFReadEncodedStrip(tif, (int)strip, buf, TIFFStripSize(tif));
                             last_index_strip = (int)(strip/scale);
