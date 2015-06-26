@@ -42,6 +42,7 @@ int nodeIndex = 0;
 //TODO not static
 static float minNodeSize = 1.0f;
 static float maxNodeSize = 100.0f;
+float one_degree_lat_length = glm::length(calcFPosFromCoord(0.0f, 0.0f) - calcFPosFromCoord(1.0f, 0.0f));
 
 static int texture_unit_size = 2915;
 static int texture_unit_size_dem = 3600;
@@ -373,7 +374,8 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     (*node)->tl = NULL;
     (*node)->tr = NULL;
     (*node)->start_index = nodeIndex * dinmension * dinmension;
-    (*node)->nodeSize = tr_coord.x - bl_coord.x;
+    (*node)->node_size_lat = tr_coord.x - bl_coord.x;
+    (*node)->node_size_lng = tr_coord.y - bl_coord.y;
     glm::vec2 mid_coord;
     if (((int)(tr_coord.x-bl_coord.x))>1 || ((int)(tr_coord.y-bl_coord.y))>1) {
         mid_coord = glm::vec2(bl_coord.x + ((int)(tr_coord.x-bl_coord.x))/2, bl_coord.y + ((int)(tr_coord.y-bl_coord.y))/2);
@@ -385,12 +387,13 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
 
     glm::vec3 bl_pos = calcFPosFromCoord(bl_coord.x, bl_coord.y);
     glm::vec3 tr_pos = calcFPosFromCoord(tr_coord.x, tr_coord.y);
-    float nodeSize = glm::length(bl_pos - tr_pos);
-    if (nodeSize < minNodeSize) {
+    float one_degree_lng_length = glm::length(calcFPosFromCoord((*node)->lat, 0.0f) - calcFPosFromCoord((*node)->lat, 1.0f));
+    float node_size = sqrt(pow((*node)->node_size_lat*one_degree_lat_length, 2) + pow((*node)->node_size_lng*one_degree_lng_length, 2));
+    if (node_size < minNodeSize) {
         addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
         return;
     }
-    if (nodeSize > glm::length((bl_pos + tr_pos)/2.0f - vertex_offset - viewPos) || nodeSize > maxNodeSize) {
+    if (node_size > glm::length(calcFPosFromCoord((*node)->lat,(*node)->lng) - vertex_offset - viewPos) || node_size > maxNodeSize) {
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
         glm::vec2 br_coord = glm::vec2(bl_coord.x, tr_coord.y);
         glm::vec2 mt_coord = glm::vec2(tr_coord.x, mid_coord.y);

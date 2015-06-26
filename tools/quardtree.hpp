@@ -19,7 +19,8 @@ struct Node {
     int start_index;
     float lat;
     float lng;
-    float nodeSize;
+    float node_size_lat;
+    float node_size_lng;
 };
 extern Node* node;
 void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, glm::detail::uint32* texture_array, Node** new_node);

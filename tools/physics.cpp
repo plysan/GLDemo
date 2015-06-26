@@ -38,10 +38,10 @@ glm::vec3 getResultNormalFromCoord(glm::vec2 coord, int* rIndex) {
             }
         }
     }
-    float lat_offset = target_node->lat + target_node->nodeSize/2.0f - coord.x;
-    float lng_offset = coord.y - target_node->lng + target_node->nodeSize/2.0f;
-    float normal_index_row_offset = (lat_offset/target_node->nodeSize * (float)(dinmension - 1));
-    float normal_index_column_offset = (lng_offset/target_node->nodeSize * (float)(dinmension - 1));
+    float lat_offset = target_node->lat + target_node->node_size_lat/2.0f - coord.x;
+    float lng_offset = coord.y - target_node->lng + target_node->node_size_lng/2.0f;
+    float normal_index_row_offset = (lat_offset/target_node->node_size_lat * (float)(dinmension - 1));
+    float normal_index_column_offset = (lng_offset/target_node->node_size_lng * (float)(dinmension - 1));
     int normal_index_offset = (int)normal_index_row_offset * dinmension + (int)normal_index_column_offset;
     float lat_deviation = normal_index_row_offset - (float)(int)normal_index_row_offset;
     float lng_deviation = normal_index_column_offset - (float)(int)normal_index_column_offset;
