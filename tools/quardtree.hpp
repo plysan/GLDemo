@@ -17,8 +17,10 @@ struct Node {
     Node* br;
     Node* tr;
     int start_index;
-    float lat;
-    float lng;
+    float lat_mid;
+    float lng_mid;
+    float lat_bl;
+    float lng_bl;
     float node_size_lat;
     float node_size_lng;
 };

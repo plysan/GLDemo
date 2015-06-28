@@ -382,18 +382,20 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     } else {
         mid_coord = (bl_coord + tr_coord)/2.0f;
     }
-    (*node)->lat = mid_coord.x;
-    (*node)->lng = mid_coord.y;
+    (*node)->lat_mid = mid_coord.x;
+    (*node)->lng_mid = mid_coord.y;
+    (*node)->lat_bl = bl_coord.x;
+    (*node)->lng_bl = bl_coord.y;
 
     glm::vec3 bl_pos = calcFPosFromCoord(bl_coord.x, bl_coord.y);
     glm::vec3 tr_pos = calcFPosFromCoord(tr_coord.x, tr_coord.y);
-    float one_degree_lng_length = glm::length(calcFPosFromCoord((*node)->lat, 0.0f) - calcFPosFromCoord((*node)->lat, 1.0f));
+    float one_degree_lng_length = glm::length(calcFPosFromCoord(mid_coord.x, 0.0f) - calcFPosFromCoord(mid_coord.x, 1.0f));
     float node_size = sqrt(pow((*node)->node_size_lat*one_degree_lat_length, 2) + pow((*node)->node_size_lng*one_degree_lng_length, 2));
     if (node_size < minNodeSize) {
         addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
         return;
     }
-    if (node_size > glm::length(calcFPosFromCoord((*node)->lat,(*node)->lng) - vertex_offset - viewPos) || node_size > maxNodeSize) {
+    if (node_size > glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - vertex_offset - viewPos) || node_size > maxNodeSize) {
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
         glm::vec2 br_coord = glm::vec2(bl_coord.x, tr_coord.y);
         glm::vec2 mt_coord = glm::vec2(tr_coord.x, mid_coord.y);

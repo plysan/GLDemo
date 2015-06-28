@@ -24,22 +24,22 @@ glm::vec3 getResultNormalFromCoord(glm::vec2 coord, int* rIndex) {
     Node* target_node_suspect = node;
     while (target_node_suspect != NULL) {
         target_node = target_node_suspect;
-        if (target_node->lat > coord.x) {
-            if (target_node->lng > coord.y) {
+        if (target_node->lat_mid > coord.x) {
+            if (target_node->lng_mid > coord.y) {
                 target_node_suspect = target_node->bl;
             } else {
                 target_node_suspect = target_node->br;
             }
         } else {
-            if (target_node->lng > coord.y) {
+            if (target_node->lng_mid > coord.y) {
                 target_node_suspect = target_node->tl;
             } else {
                 target_node_suspect = target_node->tr;
             }
         }
     }
-    float lat_offset = target_node->lat + target_node->node_size_lat/2.0f - coord.x;
-    float lng_offset = coord.y - target_node->lng + target_node->node_size_lng/2.0f;
+    float lat_offset = target_node->lat_bl + target_node->node_size_lat - coord.x;
+    float lng_offset = coord.y - target_node->lng_bl;
     float normal_index_row_offset = (lat_offset/target_node->node_size_lat * (float)(dinmension - 1));
     float normal_index_column_offset = (lng_offset/target_node->node_size_lng * (float)(dinmension - 1));
     int normal_index_offset = (int)normal_index_row_offset * dinmension + (int)normal_index_column_offset;
