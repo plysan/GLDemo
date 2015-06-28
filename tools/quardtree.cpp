@@ -147,8 +147,9 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     doubleToGlmVec3(&result[baseIndex + dinmension * (dinmension - 1)], bl_pos);
     result_uv[baseIndex + dinmension * (dinmension - 1)] = bl_uv;
 
-    int coords_spaned = (int)(tr_coord.x - bl_coord.x);
-    if (coords_spaned == 0) {
+    int coords_spaned_x = (int)(tr_coord.x - bl_coord.x);
+    int coords_spaned_y = (int)(tr_coord.y - bl_coord.y);
+    if (coords_spaned_x == 0) {
         float bl_coord_lat_texture_offset = 1.0f - (bl_coord.x - (float)(int)bl_coord.x) - (tr_coord.x - bl_coord.x);
         float bl_coord_lng_texture_offset = bl_coord.y - (float)(int)bl_coord.y;
         if (bl_coord_lng_texture_offset < 0.0f) {
@@ -174,11 +175,12 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         }
     } else {
         // dinmension covers points on both edges of node, so we need to -1
-        float scale = (float)texture_unit_size_dem/((float)(dinmension-1)/coords_spaned);
+        float scale_x = (float)texture_unit_size_dem/((float)(dinmension-1)/coords_spaned_x);
+        float scale_y = (float)texture_unit_size_dem/((float)(dinmension-1)/coords_spaned_y);
         for (int i=(int)bl_coord.x; i<(int)tr_coord.x; i++) {
             for (int j=(int)bl_coord.y; j<(int)tr_coord.y; j++) {
                 //TODO lat/lng organization in node array ?
-                int base_index_unit = nodeIndex * dinmension * dinmension + dinmension/coords_spaned*(coords_spaned-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned*(j-(int)bl_coord.y);
+                int base_index_unit = nodeIndex * dinmension * dinmension + dinmension/coords_spaned_x*(coords_spaned_x-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned_y*(j-(int)bl_coord.y);
                 int bl_coord_lat = i;
                 int bl_coord_lng = j;
                 stringstream ss;
@@ -195,20 +197,20 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
                     short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
                     int last_index_strip = -1;
-                    for (float strip=0.0f; strip<(float)TIFFNumberOfStrips(tif); strip+=scale) {
-                        if ((int)(strip/scale) != last_index_strip) {
+                    for (float strip=0.0f; strip<(float)TIFFNumberOfStrips(tif); strip+=scale_x) {
+                        if ((int)(strip/scale_x) != last_index_strip) {
                             TIFFReadEncodedStrip(tif, (int)strip, buf, TIFFStripSize(tif));
-                            last_index_strip = (int)(strip/scale);
+                            last_index_strip = (int)(strip/scale_x);
                         } else {
                             continue;
                         }
                         elevationOffset(&result[base_index_unit], (((double)(short)buf[0])/3000000.0f + 1.0f));
                         int last_index_row = base_index_unit;
-                        for (float k=scale; k<((float)(TIFFStripSize(tif)))/(float)sizeof(short); k+=scale) {
-                            if (base_index_unit + (int)(k/scale) != last_index_row) {
+                        for (float k=scale_y; k<((float)(TIFFStripSize(tif)))/(float)sizeof(short); k+=scale_y) {
+                            if (base_index_unit + (int)(k/scale_y) != last_index_row) {
                                 // The index of result cannot be plus one in every loop, but cast from float, why?
-                                elevationOffset(&result[base_index_unit + (int)(k/scale)], (((double)(short)buf[(int)(k)])/3000000.0f + 1.0f));
-                                last_index_row = base_index_unit + (int)(k/scale);
+                                elevationOffset(&result[base_index_unit + (int)(k/scale_y)], (((double)(short)buf[(int)(k)])/3000000.0f + 1.0f));
+                                last_index_row = base_index_unit + (int)(k/scale_y);
                             }
                         }
                         base_index_unit += dinmension;
