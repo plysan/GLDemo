@@ -307,11 +307,6 @@ bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale
         ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord.x << '_' << ew << bl_coord.y << "_img.tif";
     }
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
-    if (tif == NULL && tr_coord.x - bl_coord.x >= 1.0f) {
-        ss.str(std::string());
-        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << "def.tif";
-        tif = TIFFOpen(ss.str().c_str(), "r");
-    }
     if (tif != NULL) {
         created = true;
         uint32 imageW, imageH;
