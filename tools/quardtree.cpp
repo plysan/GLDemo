@@ -327,6 +327,38 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
     return created;
 }
 
+bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
+    stringstream ss;
+    ss << "/home/ply/projects/opengl/test2/data/Hawaii/def.tif";
+    TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
+    if (tif != NULL) {
+        int base_index_unit = 0;
+        uint32 imageW, imageH;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
+        float scale_lat = (tr_coord.x-bl_coord.x)/180.0f*imageH/texture_unit_size;
+        float scale_lng = (tr_coord.y-bl_coord.y)/360.0f*imageW/texture_unit_size;
+        int begin_index_img_lat = (int)((90.0f-tr_coord.x)/180.0f*imageH);
+        int begin_index_img_lng = (int)((tr_coord.y+180.0f)/360.0f*imageW);
+        uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
+        float strip = begin_index_img_lat;
+        for (int i=0; i<texture_unit_size; i++) {
+            TIFFReadRGBAStrip(tif, (int)strip, buf);
+            strip += scale_lat;
+            float strip_index = begin_index_img_lng;
+            for (int j=0; j<texture_unit_size; j++) {
+                uint32 color = buf[(int)strip_index];
+                strip_index += scale_lng;
+                texture[base_index_unit + j] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+            }
+            base_index_unit += texture_unit_size * texture_unit_dinmension;
+        }
+        _TIFFfree(buf);
+        TIFFClose(tif);
+        texture_unit_index++;
+    }
+}
+
 glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
     if (texture_unit_index >= texture_unit_dinmension * texture_unit_dinmension) {
         texture_unit_index--;
@@ -439,7 +471,8 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
-    selectNode(bl_coord, tr_coord, glm::vec2(-1.0f/(float)texture_unit_dinmension, 0.0f), glm::vec2(0.0f, 1.0f/(float)texture_unit_dinmension), 0, new_node);
+    readGlobalImageToTexture(bl_coord, tr_coord);
+    selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension), 0, new_node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
