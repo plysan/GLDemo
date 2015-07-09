@@ -283,7 +283,7 @@ void genElementIndex() {
     }
 }
 
-bool createLODDEM(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
+bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
     bool created = false;
     stringstream ss;
     ss << std::setprecision(std::numeric_limits<float>::digits10+1);
@@ -345,13 +345,13 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
                         (j - bl_coord_x_int) * (texture_unit_size/scale_y) * texture_unit_size * texture_unit_dinmension +
                         (i - bl_coord_y_int) * (texture_unit_size/scale_x);
-                createLODDEM(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit);
+                readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit);
             }
         }
     } else {
         int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
                 texture_unit_index % texture_unit_dinmension * texture_unit_size;
-        if (!createLODDEM(bl_coord, tr_coord, 1, 1, base_index_unit)) {
+        if (!readImageToTexture(bl_coord, tr_coord, 1, 1, base_index_unit)) {
             return NULL;
         }
     }
