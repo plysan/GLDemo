@@ -313,7 +313,6 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
         uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
-        int index = 0;
         for (int strip=TIFFNumberOfStrips(tif)-1; strip>-1; strip-=scale_y) {
             base_index_unit += texture_unit_size * texture_unit_dinmension;
             TIFFReadRGBAStrip(tif, strip, buf);
