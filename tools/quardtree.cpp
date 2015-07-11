@@ -339,13 +339,13 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
         float scale_lat = (tr_coord.x-bl_coord.x)/180.0f*imageH/texture_unit_size;
         float scale_lng = (tr_coord.y-bl_coord.y)/360.0f*imageW/texture_unit_size;
-        int begin_index_img_lat = (int)((90.0f-tr_coord.x)/180.0f*imageH);
-        int begin_index_img_lng = (int)((tr_coord.y+180.0f)/360.0f*imageW);
+        int begin_index_img_lat = (int)((90.0f-bl_coord.x)/180.0f*imageH);
+        int begin_index_img_lng = (int)((bl_coord.y+180.0f)/360.0f*imageW);
         uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
         float strip = begin_index_img_lat;
         for (int i=0; i<texture_unit_size; i++) {
             TIFFReadRGBAStrip(tif, (int)strip, buf);
-            strip += scale_lat;
+            strip -= scale_lat;
             float strip_index = begin_index_img_lng;
             for (int j=0; j<texture_unit_size; j++) {
                 uint32 color = buf[(int)strip_index];
