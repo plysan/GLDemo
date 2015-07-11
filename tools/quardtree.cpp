@@ -356,7 +356,6 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
         }
         _TIFFfree(buf);
         TIFFClose(tif);
-        texture_unit_index++;
     }
 }
 
@@ -473,6 +472,7 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_normal = result_normal_ret;
     texture = texture_array;
     readGlobalImageToTexture(bl_coord, tr_coord);
+    texture_unit_index++;
     selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension), 0, new_node);
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
