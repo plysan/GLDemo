@@ -375,8 +375,8 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
                 int base_index_unit =
                         (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
-                        (j - bl_coord_x_int) * (texture_unit_size/scale_y) * texture_unit_size * texture_unit_dinmension +
-                        (i - bl_coord_y_int) * (texture_unit_size/scale_x);
+                        (int)((j - bl_coord_x_int) * ((float)texture_unit_size/scale_y)) * texture_unit_size * texture_unit_dinmension +
+                        (int)((i - bl_coord_y_int) * ((float)texture_unit_size/scale_x));
                 readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit);
             }
         }
