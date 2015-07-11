@@ -332,7 +332,8 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     ss << "/home/ply/projects/opengl/test2/data/Hawaii/def.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
-        int base_index_unit = 0;
+        int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension
+                + texture_unit_index % texture_unit_dinmension * texture_unit_size;
         uint32 imageW, imageH;
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
