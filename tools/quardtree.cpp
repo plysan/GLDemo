@@ -363,6 +363,7 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
     if (texture_unit_index >= texture_unit_dinmension * texture_unit_dinmension) {
         texture_unit_index--;
     } else if (!detailed) {
+        readGlobalImageToTexture(bl_coord, tr_coord);
         int bl_coord_x_int = (int)bl_coord.x;
         int tr_coord_x_int = (int)tr_coord.x;
         int bl_coord_y_int = (int)bl_coord.y;
