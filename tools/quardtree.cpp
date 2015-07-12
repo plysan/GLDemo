@@ -71,15 +71,25 @@ glm::vec3* createQuardTreeNormal() {
     return result_normal;
 }
 
-void interpolatePos2D(double* tl_pos, double* bl_pos, double* tr_pos, double* br_pos, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
-    double* mt_pos = midPos3D(tl_pos, tr_pos);
-    double* mb_pos = midPos3D(bl_pos, br_pos);
-    double* ml_pos = midPos3D(bl_pos, tl_pos);
-    double* mr_pos = midPos3D(br_pos, tr_pos);
-    double* mid_pos = midPos3D(ml_pos, mr_pos);
-    doubleToGlmVec3(&result[mid_pos_index], mid_pos);
-    doubleToGlmVec3(&result[mid_pos_index + unit_size], mr_pos);
-    doubleToGlmVec3(&result[mid_pos_index + dinmension*unit_size], mb_pos);
+double* calcMDPosFromCoord(float lat, float lng) {
+    double latD = (double)lat/180*localcons::pi;
+    double lngD = (double)lng/180*localcons::pi;
+    return new double[3]{
+        (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
+        (double)localcons::earth_radius * std::sin(latD) - vertex_offset.y,
+        (double)-localcons::earth_radius * std::cos(latD) * std::sin(lngD) - vertex_offset.z
+    };
+}
+
+void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
+    glm::vec2 mt_coord = glm::vec2(tr_coord.x, (bl_coord.y+tr_coord.y)/2.0f);
+    glm::vec2 mb_coord = glm::vec2(bl_coord.x, (bl_coord.y+tr_coord.y)/2.0f);
+    glm::vec2 ml_coord = glm::vec2((bl_coord.x+tr_coord.x)/2.0f, bl_coord.y);
+    glm::vec2 mr_coord = glm::vec2((bl_coord.x+tr_coord.x)/2.0f, tr_coord.y);
+    glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
+    doubleToGlmVec3(&result[mid_pos_index], calcMDPosFromCoord(mid_coord.x, mid_coord.y));
+    doubleToGlmVec3(&result[mid_pos_index + unit_size], calcMDPosFromCoord(mr_coord.x, mr_coord.y));
+    doubleToGlmVec3(&result[mid_pos_index + dinmension*unit_size], calcMDPosFromCoord(mb_coord.x, mb_coord.y));
 
     glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
     glm::vec2 mr_uv = glm::vec2(tr_uv.x, mid_uv.y);
@@ -91,21 +101,21 @@ void interpolatePos2D(double* tl_pos, double* bl_pos, double* tr_pos, double* br
     result_uv[mid_pos_index + dinmension*unit_size] = mb_uv;
     if (unit_size > 1) {
         int sub_unit_size = unit_size/2;
-        interpolatePos2D(tl_pos, ml_pos, mt_pos, mid_pos, ml_uv, mt_uv, mid_pos_index - dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
-        interpolatePos2D(mt_pos, mid_pos, tr_pos, mr_pos, mid_uv, tr_uv, mid_pos_index - dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
-        interpolatePos2D(ml_pos, bl_pos, mid_pos, mb_pos, bl_uv, mid_uv, mid_pos_index + dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
-        interpolatePos2D(mid_pos, mb_pos, mr_pos, br_pos, mb_uv, mr_uv, mid_pos_index + dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
+        interpolatePos2D(ml_coord, mt_coord, ml_uv, mt_uv, mid_pos_index - dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
+        interpolatePos2D(mid_coord, tr_coord, mid_uv, tr_uv, mid_pos_index - dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
+        interpolatePos2D(bl_coord, mid_coord, bl_uv, mid_uv, mid_pos_index + dinmension*sub_unit_size - sub_unit_size, sub_unit_size);
+        interpolatePos2D(mb_coord, mr_coord, mb_uv, mr_uv, mid_pos_index + dinmension*sub_unit_size + sub_unit_size, sub_unit_size);
     }
 }
 
-void interpolatePos1D(double* frst_pos, double* lst_pos, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
-    double* mid_pos = midPos3D(frst_pos, lst_pos);
-    doubleToGlmVec3(&result[mid_pos_index], mid_pos);
+void interpolatePos1D(glm::vec2 frst_coord, glm::vec2 lst_coord, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
+    glm::vec2 mid_coord = (frst_coord + lst_coord)/2.0f;
+    doubleToGlmVec3(&result[mid_pos_index], calcMDPosFromCoord(mid_coord.x, mid_coord.y));
     glm::vec2 mid_uv = (frst_uv + lst_uv)/2.0f;
     result_uv[mid_pos_index] = mid_uv;
     if (interval >= unit_size) {
-        interpolatePos1D(frst_pos, mid_pos, frst_uv, mid_uv, mid_pos_index-interval, interval/2, unit_size);
-        interpolatePos1D(mid_pos, lst_pos, mid_uv, lst_uv, mid_pos_index+interval, interval/2, unit_size);
+        interpolatePos1D(frst_coord, mid_coord, frst_uv, mid_uv, mid_pos_index-interval, interval/2, unit_size);
+        interpolatePos1D(mid_coord, lst_coord, mid_uv, lst_uv, mid_pos_index+interval, interval/2, unit_size);
     }
 }
 
@@ -113,16 +123,6 @@ void elevationOffset(glm::vec3 *result, double elevation_factor) {
     result->x = ((double)result->x + (double)vertex_offset.x) * elevation_factor - (double)vertex_offset.x;
     result->y = ((double)result->y + (double)vertex_offset.y) * elevation_factor - (double)vertex_offset.y;
     result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
-}
-
-double* calcMDPosFromCoord(float lat, float lng) {
-    double latD = (double)lat/180*localcons::pi;
-    double lngD = (double)lng/180*localcons::pi;
-    return new double[3]{
-        (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(latD) - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(latD) * std::sin(lngD) - vertex_offset.z
-    };
 }
 
 void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
@@ -135,9 +135,9 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     double* br_pos = calcMDPosFromCoord(bl_coord.x, tr_coord.y);
     double* tl_pos = calcMDPosFromCoord(tr_coord.x, bl_coord.y);
     double* tr_pos = calcMDPosFromCoord(tr_coord.x, tr_coord.y);
-    interpolatePos2D(tl_pos, bl_pos, tr_pos, br_pos, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
-    interpolatePos1D(tl_pos, tr_pos, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
-    interpolatePos1D(tl_pos, bl_pos, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
+    interpolatePos2D(bl_coord, tr_coord, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
+    interpolatePos1D(glm::vec2(tr_coord.x, bl_coord.y), tr_coord, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
+    interpolatePos1D(glm::vec2(tr_coord.x, bl_coord.y), bl_coord, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
     doubleToGlmVec3(&result[baseIndex], tl_pos);
     result_uv[baseIndex] = glm::vec2(bl_uv.x, tr_uv.y);
     doubleToGlmVec3(&result[baseIndex + dinmension - 1], tr_pos);
