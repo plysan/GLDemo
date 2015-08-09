@@ -18,7 +18,7 @@ void main()
     // You probably want to put them as uniforms
     vec3 LightColor = vec3(1,1,1);
     float LightPower = 200000000.0f;
-    
+
     // Material properties
     vec3 MaterialDiffuseColor = vec3(0.01, 0.01, 0.01) + texture2D( myTextureSampler, uv ).rgb;
     vec3 MaterialAmbientColor = vec3(0.4, 0.4, 0.4) * MaterialDiffuseColor;
@@ -32,7 +32,7 @@ void main()
     // Direction of the light (from the fragment to the light)
     vec3 l = normalize( LightDirection_cameraspace );
     // Cosine of the angle between the normal and the light direction,
-    // clamped above 0 
+    // clamped above 0
     //  - light is at the vertical of the triangle -> 1
     //  - light is perpendicular to the triangle -> 0
     //  - light is behind the triangle -> 0
@@ -47,7 +47,7 @@ void main()
     //  - Looking into the reflection -> 1
     //  - Looking elsewhere -> < 1
     float cosAlpha = clamp( dot( E,R ), 0,1 );
-    
+
     color =
         // Ambient : simulates indirect lighting
         MaterialAmbientColor +
