@@ -309,16 +309,20 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
         created = true;
-        uint32 imageW, imageH;
-        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
-        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
-        uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
-        for (int strip=TIFFNumberOfStrips(tif)-1; strip>-1; strip-=scale_y) {
+        uint32 image_w, image_h;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
+        float scale_lat = image_h/(texture_unit_size/(float)scale_y);
+        float scale_lng = image_w/(texture_unit_size/(float)scale_x);
+        uint32* buf = (uint32*)_TIFFmalloc(image_w * sizeof(uint32));
+        for (float strip=image_h-1; strip>=0.0f; strip-=scale_lat) {
             base_index_unit += texture_unit_size * texture_unit_dinmension;
-            TIFFReadRGBAStrip(tif, strip, buf);
-            for (int i=0; i<TIFFStripSize(tif)/sizeof(uint32); i+=scale_x) {
-                uint32 color = buf[i];
-                texture[base_index_unit + i/scale_x] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+            TIFFReadRGBAStrip(tif, (int)strip, buf);
+            int row_index = 0;
+            for (float i=0; i<image_w; i+=scale_lng) {
+                uint32 color = buf[(int)i];
+                texture[base_index_unit + row_index] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+                row_index++;
             }
         }
         _TIFFfree(buf);
