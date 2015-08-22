@@ -44,9 +44,10 @@ static float minNodeSize = 1.0f;
 static float maxNodeSize = 100.0f;
 float one_degree_lat_length = glm::length(calcFPosFromCoord(0.0f, 0.0f) - calcFPosFromCoord(1.0f, 0.0f));
 
-static int texture_unit_size = 2915;
+static int texture_unit_size = 1024;
 static int texture_unit_size_dem = 3600;
 static int texture_unit_dinmension = 2;
+int texture_dinmension = texture_unit_size*texture_unit_dinmension;
 static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
 static uint32* texture;
 static int texture_unit_index = 0;

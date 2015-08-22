@@ -88,7 +88,7 @@ void updateData()
         std::copy(&g_vertex_uv_data[0], &g_vertex_uv_data[quardTreeLength], g_mapped_vertex_uv_data);
         std::copy(&g_vertex_normal_data[0], &g_vertex_normal_data[quardTreeLength], g_mapped_vertex_normal_data);
         std::copy(&g_vertex_element_data[0], &g_vertex_element_data[elemantIndexLength], g_mapped_vertex_element_data);
-        std::copy(&texture_array[0], &texture_array[2915*2915*4], mapped_texture_array);
+        std::copy(&texture_array[0], &texture_array[texture_dinmension*texture_dinmension], mapped_texture_array);
 
         unmapping = true;
         updating = false;
@@ -146,21 +146,21 @@ int main( void )
     using_vertex_offset = vertex_offset;
     vertex_offset_snap = using_vertex_offset;
 
-    texture_array = new glm::detail::uint32[2915*2915*4];
+    texture_array = new glm::detail::uint32[texture_dinmension*texture_dinmension];
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 5830, 5830, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_array);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_dinmension, texture_dinmension, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_array);
 
     GLuint* pixelBuffer = new GLuint[2];
     glGenBuffers(2, pixelBuffer);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[1]);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, texture_array, GL_STREAM_DRAW);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, texture_array, GL_STREAM_DRAW);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[2]);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, texture_array, GL_STREAM_DRAW);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, texture_array, GL_STREAM_DRAW);
 
     GLuint* vertexbuffer = new GLuint[2];
     glGenBuffers(2, vertexbuffer);
@@ -223,7 +223,7 @@ int main( void )
             glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 5830, 5830, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture_dinmension, texture_dinmension, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 
             viewPos = viewPos - viewPos_cached;
             using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
@@ -251,8 +251,8 @@ int main( void )
             g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[(renderingBufferIndex+1)%2]);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
-            glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, NULL, GL_STREAM_DRAW);
-            mapped_texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*2915*2915*4, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+            glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, NULL, GL_STREAM_DRAW);
+            mapped_texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             updating = true;
         }
         frameCounter++;
