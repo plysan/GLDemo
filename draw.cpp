@@ -31,14 +31,18 @@ bool terminating = false;
 glm::vec3** g_vertex_buffer_data;
 glm::vec3* g_mapped_vertex_buffer_data;
 glm::vec2* g_vertex_uv_data;
+glm::vec2* g_mapped_vertex_uv_data;
 glm::vec3* g_vertex_normal_data;
+glm::vec3* g_mapped_vertex_normal_data;
 unsigned int* g_vertex_element_data;
+unsigned int* g_mapped_vertex_element_data;
 glm::detail::uint32* texture_array;
+glm::detail::uint32* mapped_texture_array;
 int quardTreeLength = 0;
 int elemantIndexLength = 0;
 int elemantIndexLengthForRendering = 0;
 
-int frameCounter = 0;
+int frameCounter = 205;
 int renderingBufferIndex = 0;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -69,7 +73,7 @@ void updateData()
             glm::vec2(19.0f, -157.0f),
             glm::vec2(21.0f, -155.0f),
             &quardTreeLength,
-            g_mapped_vertex_buffer_data,
+            g_vertex_buffer_data[renderingBufferIndex],
             g_vertex_uv_data,
             g_vertex_normal_data,
             &elemantIndexLength,
@@ -80,7 +84,11 @@ void updateData()
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d\n", quardTreeLength, elemantIndexLength, nodeIndex);
 
-        std::copy(&g_mapped_vertex_buffer_data[0], &g_mapped_vertex_buffer_data[quardTreeLength], g_vertex_buffer_data[(renderingBufferIndex+1)%2]);
+        std::copy(&g_vertex_buffer_data[renderingBufferIndex][0], &g_vertex_buffer_data[renderingBufferIndex][quardTreeLength], g_mapped_vertex_buffer_data);
+        std::copy(&g_vertex_uv_data[0], &g_vertex_uv_data[quardTreeLength], g_mapped_vertex_uv_data);
+        std::copy(&g_vertex_normal_data[0], &g_vertex_normal_data[quardTreeLength], g_mapped_vertex_normal_data);
+        std::copy(&g_vertex_element_data[0], &g_vertex_element_data[elemantIndexLength], g_mapped_vertex_element_data);
+        std::copy(&texture_array[0], &texture_array[2915*2915*4], mapped_texture_array);
 
         unmapping = true;
         updating = false;
@@ -201,37 +209,11 @@ int main( void )
     GLuint TextureUID  = glGetUniformLocation(programID, "myTextureSampler");
     glUniform1i(TextureUID, 0);
 
+    int update_frame_interval = 5;
     do{
-        if (frameCounter%500 == 0 && updating == false) {
-            elemantIndexLengthForRendering = elemantIndexLength;
-
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[(renderingBufferIndex+1)%2]);
-            // this proccess may take noticeable time if update sub rectangle is large based on my experience, why?
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 5830, 5830, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
-
-            //orphaning and mapping the buffers that is not used and to be updated
-            glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
-            glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, NULL, GL_STREAM_DRAW);
-            g_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
-            glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
-            g_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, NULL, GL_STREAM_DRAW);
-            g_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
-            glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, NULL, GL_STREAM_DRAW);
-            texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*2915*2915*4, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
-            if (NULL == g_mapped_vertex_buffer_data) {
-                std::cout << "Error: " << glGetError() << std::endl;
-                throw std::runtime_error("Failed to map buffer.");
-            }
-
+        if (frameCounter%200 == update_frame_interval && updating == false && unmapping == false) {
             //use the buffers that is updated
-            renderingBufferIndex = (renderingBufferIndex+1)%2;
+            elemantIndexLengthForRendering = elemantIndexLength;
             glBindVertexArray(VertexArrayID);
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
@@ -240,18 +222,42 @@ int main( void )
             glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
             glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 5830, 5830, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 
             viewPos = viewPos - viewPos_cached;
             using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
             using_vertex_offset = vertex_offset_snap;
             node = new_node;
-
+            renderingBufferIndex = (renderingBufferIndex+1)%2;
+        }
+        if (frameCounter%200 == update_frame_interval*2 && updating == false && unmapping == false) {
+            //orphaning and mapping the buffers that is not used and to be updated
+            glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            if (NULL == g_mapped_vertex_buffer_data) {
+                std::cout << "Error: " << glGetError() << std::endl;
+                throw std::runtime_error("Failed to map buffer.");
+            }
+            glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[(renderingBufferIndex+1)%2]);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer[renderingBufferIndex]);
+            glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*2915*2915*4, NULL, GL_STREAM_DRAW);
+            mapped_texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*2915*2915*4, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             updating = true;
         }
         frameCounter++;
-        if (unmapping) {
+        if (unmapping && frameCounter%200 == 0) {
             //unmapping the updated buffers
-            renderingBufferIndex = (renderingBufferIndex+1)%2;
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glUnmapBuffer(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
@@ -264,7 +270,6 @@ int main( void )
             glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             unmapping = false;
-            renderingBufferIndex = (renderingBufferIndex+1)%2;
         }
 
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
