@@ -190,10 +190,10 @@ int main( void )
     GLuint* elementBuffer = new GLuint[2];
     glGenBuffers(2, elementBuffer);
     g_vertex_element_data = createQuardTreeElementIndex();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[0]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[1]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[1]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
     
     std::thread first (updateData);
     first.detach();
@@ -243,10 +243,9 @@ int main( void )
             glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
             g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[(renderingBufferIndex+1)%2]);
+            glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
             glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, NULL, GL_STREAM_DRAW);
             mapped_texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
@@ -261,8 +260,8 @@ int main( void )
             glUnmapBuffer(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
             glUnmapBuffer(GL_ARRAY_BUFFER);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-            glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
+            glUnmapBuffer(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
