@@ -375,6 +375,7 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
         int tr_coord_y_int = (int)tr_coord.y;
         int scale_y = tr_coord_x_int - bl_coord_x_int;
         int scale_x = tr_coord_y_int - bl_coord_y_int;
+        bool exist_any_img = false;
         for (int i=bl_coord_y_int; i<tr_coord_y_int; i++) {
             for (int j=bl_coord_x_int; j<tr_coord_x_int; j++) {
                 int base_index_unit =
@@ -382,8 +383,13 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
                         (int)((j - bl_coord_x_int) * ((float)texture_unit_size/scale_y)) * texture_unit_size * texture_unit_dinmension +
                         (int)((i - bl_coord_y_int) * ((float)texture_unit_size/scale_x));
-                readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit);
+                if (readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit)) {
+                    exist_any_img = true;
+                }
             }
+        }
+        if (!exist_any_img) {
+            return NULL;
         }
     } else {
         int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
@@ -437,7 +443,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         glm::vec2 ml_coord = glm::vec2(mid_coord.x, bl_coord.y);
         glm::vec2 mr_coord = glm::vec2(mid_coord.x, tr_coord.y);
 
-        if (level%2 == 0 && texture_unit_index < texture_units) {//TODO: Height map size def
+        if (texture_unit_index < texture_units) {//TODO: Height map size def
             float delta_coord = tr_coord.x-bl_coord.x;
             bool detailed = delta_coord < 1.0f;
             glm::vec2* temp_bl_uv = new_texture_unit(bl_coord, tr_coord, detailed);
