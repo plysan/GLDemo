@@ -30,13 +30,9 @@ bool terminating = false;
 
 glm::vec3** g_vertex_buffer_data;
 glm::vec3* g_mapped_vertex_buffer_data;
-glm::vec2* g_vertex_uv_data;
 glm::vec2* g_mapped_vertex_uv_data;
-glm::vec3* g_vertex_normal_data;
 glm::vec3* g_mapped_vertex_normal_data;
-unsigned int* g_vertex_element_data;
 unsigned int* g_mapped_vertex_element_data;
-glm::detail::uint32* g_texture_array_data;
 glm::detail::uint32* g_mapped_texture_array_data;
 int quardTreeLength = 0;
 int elemantIndexLength = 0;
@@ -74,21 +70,17 @@ void updateData()
             glm::vec2(21.0f, -155.0f),
             &quardTreeLength,
             g_vertex_buffer_data[renderingBufferIndex],
-            g_vertex_uv_data,
-            g_vertex_normal_data,
+            g_mapped_vertex_uv_data,
+            g_mapped_vertex_normal_data,
             &elemantIndexLength,
-            g_vertex_element_data,
-            g_texture_array_data,
+            g_mapped_vertex_element_data,
+            g_mapped_texture_array_data,
             &new_node
             );
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d\n", quardTreeLength, elemantIndexLength, nodeIndex);
 
         std::copy(&g_vertex_buffer_data[renderingBufferIndex][0], &g_vertex_buffer_data[renderingBufferIndex][quardTreeLength], g_mapped_vertex_buffer_data);
-        std::copy(&g_vertex_uv_data[0], &g_vertex_uv_data[quardTreeLength], g_mapped_vertex_uv_data);
-        std::copy(&g_vertex_normal_data[0], &g_vertex_normal_data[quardTreeLength], g_mapped_vertex_normal_data);
-        std::copy(&g_vertex_element_data[0], &g_vertex_element_data[elemantIndexLength], g_mapped_vertex_element_data);
-        std::copy(&g_texture_array_data[0], &g_texture_array_data[texture_dinmension*texture_dinmension], g_mapped_texture_array_data);
 
         unmapping = true;
         updating = false;
@@ -146,7 +138,7 @@ int main( void )
     using_vertex_offset = vertex_offset;
     vertex_offset_snap = using_vertex_offset;
 
-    g_texture_array_data = new glm::detail::uint32[texture_dinmension*texture_dinmension];
+    glm::detail::uint32* g_texture_array_data = new glm::detail::uint32[texture_dinmension*texture_dinmension];
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -159,6 +151,7 @@ int main( void )
     glGenBuffers(1, &pixelBuffer);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, g_texture_array_data, GL_STREAM_DRAW);
+    delete[] g_texture_array_data;
 
     GLuint* vertexbuffer = new GLuint[2];
     glGenBuffers(2, vertexbuffer);
@@ -173,27 +166,30 @@ int main( void )
 
     GLuint* uvbuffer = new GLuint[2];
     glGenBuffers(2, uvbuffer);
-    g_vertex_uv_data = createQuardTreeUV();
+    glm::vec2* g_vertex_uv_data = createQuardTreeUV();
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
+    delete[] g_vertex_uv_data;
 
     GLuint* normalbuffer = new GLuint[2];
     glGenBuffers(2, normalbuffer);
-    g_vertex_normal_data = createQuardTreeNormal();
+    glm::vec3* g_vertex_normal_data = createQuardTreeNormal();
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
+    delete[] g_vertex_normal_data;
 
     GLuint* elementBuffer = new GLuint[2];
     glGenBuffers(2, elementBuffer);
-    g_vertex_element_data = createQuardTreeElementIndex();
+    unsigned int* g_vertex_element_data = createQuardTreeElementIndex();
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
+    delete[] g_vertex_element_data;
     
     std::thread first (updateData);
     first.detach();
