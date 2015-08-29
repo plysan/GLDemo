@@ -37,7 +37,7 @@ glm::vec3* g_mapped_vertex_normal_data;
 unsigned int* g_vertex_element_data;
 unsigned int* g_mapped_vertex_element_data;
 glm::detail::uint32* g_texture_array_data;
-glm::detail::uint32* mapped_texture_array_data;
+glm::detail::uint32* g_mapped_texture_array_data;
 int quardTreeLength = 0;
 int elemantIndexLength = 0;
 int elemantIndexLengthForRendering = 0;
@@ -88,7 +88,7 @@ void updateData()
         std::copy(&g_vertex_uv_data[0], &g_vertex_uv_data[quardTreeLength], g_mapped_vertex_uv_data);
         std::copy(&g_vertex_normal_data[0], &g_vertex_normal_data[quardTreeLength], g_mapped_vertex_normal_data);
         std::copy(&g_vertex_element_data[0], &g_vertex_element_data[elemantIndexLength], g_mapped_vertex_element_data);
-        std::copy(&g_texture_array_data[0], &g_texture_array_data[texture_dinmension*texture_dinmension], mapped_texture_array_data);
+        std::copy(&g_texture_array_data[0], &g_texture_array_data[texture_dinmension*texture_dinmension], g_mapped_texture_array_data);
 
         unmapping = true;
         updating = false;
@@ -248,7 +248,7 @@ int main( void )
             g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
             glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, NULL, GL_STREAM_DRAW);
-            mapped_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+            g_mapped_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             updating = true;
         }
         frameCounter++;
