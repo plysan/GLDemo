@@ -36,8 +36,8 @@ glm::vec3* g_vertex_normal_data;
 glm::vec3* g_mapped_vertex_normal_data;
 unsigned int* g_vertex_element_data;
 unsigned int* g_mapped_vertex_element_data;
-glm::detail::uint32* texture_array;
-glm::detail::uint32* mapped_texture_array;
+glm::detail::uint32* g_texture_array_data;
+glm::detail::uint32* mapped_texture_array_data;
 int quardTreeLength = 0;
 int elemantIndexLength = 0;
 int elemantIndexLengthForRendering = 0;
@@ -78,7 +78,7 @@ void updateData()
             g_vertex_normal_data,
             &elemantIndexLength,
             g_vertex_element_data,
-            texture_array,
+            g_texture_array_data,
             &new_node
             );
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
@@ -88,7 +88,7 @@ void updateData()
         std::copy(&g_vertex_uv_data[0], &g_vertex_uv_data[quardTreeLength], g_mapped_vertex_uv_data);
         std::copy(&g_vertex_normal_data[0], &g_vertex_normal_data[quardTreeLength], g_mapped_vertex_normal_data);
         std::copy(&g_vertex_element_data[0], &g_vertex_element_data[elemantIndexLength], g_mapped_vertex_element_data);
-        std::copy(&texture_array[0], &texture_array[texture_dinmension*texture_dinmension], mapped_texture_array);
+        std::copy(&g_texture_array_data[0], &g_texture_array_data[texture_dinmension*texture_dinmension], mapped_texture_array_data);
 
         unmapping = true;
         updating = false;
@@ -146,19 +146,19 @@ int main( void )
     using_vertex_offset = vertex_offset;
     vertex_offset_snap = using_vertex_offset;
 
-    texture_array = new glm::detail::uint32[texture_dinmension*texture_dinmension];
+    g_texture_array_data = new glm::detail::uint32[texture_dinmension*texture_dinmension];
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_dinmension, texture_dinmension, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, texture_array);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture_dinmension, texture_dinmension, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_texture_array_data);
 
     GLuint pixelBuffer;
     glGenBuffers(1, &pixelBuffer);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, texture_array, GL_STREAM_DRAW);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, g_texture_array_data, GL_STREAM_DRAW);
 
     GLuint* vertexbuffer = new GLuint[2];
     glGenBuffers(2, vertexbuffer);
@@ -248,7 +248,7 @@ int main( void )
             g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
             glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, NULL, GL_STREAM_DRAW);
-            mapped_texture_array = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+            mapped_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             updating = true;
         }
         frameCounter++;
