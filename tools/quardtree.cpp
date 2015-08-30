@@ -26,7 +26,7 @@ using namespace std;
 extern glm::vec3 viewPos;
 glm::vec3 vertex_offset;
 
-Node* node = new Node;
+Node* node = NULL;
 glm::vec3* result;
 glm::vec2* result_uv;
 static unsigned int* result_index;
@@ -489,5 +489,20 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
+}
+
+void cleanupNode(Node** node) {
+    if (*node == NULL) {
+        return;
+    }
+    Node* pointer = (*node)->tl;
+    cleanupNode(&pointer);
+    pointer = (*node)->tr;
+    cleanupNode(&pointer);
+    pointer = (*node)->bl;
+    cleanupNode(&pointer);
+    pointer = (*node)->br;
+    cleanupNode(&pointer);
+    delete *node;
 }
 
