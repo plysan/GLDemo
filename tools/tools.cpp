@@ -25,10 +25,6 @@ glm::vec3 calcFPosFromCoord(float lat, float lng) {
             );
 }
 
-double* midPos3D(double *a, double *b) {
-    return new double[3] {(a[0] + b[0])/2, (a[1] + b[1])/2, (a[2] + b[2])/2};
-}
-
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
     float radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
     float lat = atan(pos.y/radius_xz)/localcons::pi*180.0f;
@@ -42,54 +38,6 @@ glm::vec2 calcCoordFromPos(glm::vec3 pos) {
     }
     lng = lng/localcons::pi*180.0f;
     return glm::vec2(lat, lng);
-}
-
-GLuint readTiffImage(char *name){
-
-    TIFF *tif;
-    tif = TIFFOpen(name, "r");
-    if (tif == NULL){
-        fprintf(stderr, "tif == NULL\n");
-        exit(1);
-    }
-
-    uint32 imageW, imageH;
-    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
-    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
-    GLfloat* raster = new GLfloat[imageW * imageH];
-    printf("image size: %d\n", imageW * imageH);
-    printf("strip size: %d\n", TIFFStripSize(tif));
-    short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
-    int index = 0;
-    for (tstrip_t strip=0; strip<TIFFNumberOfStrips(tif); strip++) {
-        TIFFReadEncodedStrip(tif, strip, buf, TIFFStripSize(tif));
-        for (int i=0; i<TIFFStripSize(tif)/sizeof(short); i++) {
-            raster[index++] = ((float)(short)buf[i])/2000;
-        }
-    }
-    _TIFFfree(buf);
-
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, imageW, imageH, 0, GL_RED, GL_FLOAT, raster);
-    delete [] raster;
-    TIFFClose(tif);
-    return textureID;
-}
-
-GLuint readTextureFromArray(glm::detail::uint32* array, GLuint dimension) {
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dimension, dimension, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, array);
-    return textureID;
 }
 
 GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path){
