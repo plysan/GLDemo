@@ -10,7 +10,7 @@
 #include <chrono>
 #include "tools/tools.hpp"
 #include "tools/controls.hpp"
-#include "tools/quardtree.hpp"
+#include "tools/quardtreeTerrain.hpp"
 #include "tools/physics.hpp"
 
 extern glm::vec3 viewPos;
@@ -67,8 +67,8 @@ void updateData(bool loop)
         new_node = new Node;
         cleanupNode(&node_to_del);
         createQuardTree(
-            glm::vec2(19.0f, -157.0f),
-            glm::vec2(21.0f, -155.0f),
+            glm::vec2(17.0f, -160.0f),
+            glm::vec2(24.0f, -153.0f),
             &quardTreeLength,
             g_vertex_buffer_data[renderingBufferIndex],
             g_mapped_vertex_uv_data,

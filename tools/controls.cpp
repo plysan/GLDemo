@@ -6,7 +6,7 @@
 #include "constants.hpp"
 #include "tools.hpp"
 #include "physics.hpp"
-#include "quardtree.hpp"
+#include "quardtreeTerrain.hpp"
 
 extern GLFWwindow* window;
 extern short windowW, windowH;

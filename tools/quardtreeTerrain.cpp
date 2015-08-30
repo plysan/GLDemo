@@ -17,7 +17,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/constants.hpp>
 #include <GL/glew.h>
-#include "quardtree.hpp"
+#include "quardtreeTerrain.hpp"
 #include "constants.hpp"
 #include "tools.hpp"
 
@@ -33,20 +33,20 @@ static unsigned int* result_index;
 static glm::vec3* result_normal;
 
 // dinmension must be 2^n+1 where n is int
-int dinmension = 129;
+int dinmension = 65;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
-int maxNodes = 100;
+int maxNodes = 500;
 int vertexBufferSize = dinmension*dinmension*maxNodes;
 int ele_index_size = maxNodes*ele_index_node_size;
 int nodeIndex = 0;
 //TODO not static
-static float minNodeSize = 1.0f;
+static float minNodeSize = 0.5f;
 static float maxNodeSize = 100.0f;
 float one_degree_lat_length = glm::length(calcFPosFromCoord(0.0f, 0.0f) - calcFPosFromCoord(1.0f, 0.0f));
 
-static int texture_unit_size = 1024;
+static int texture_unit_size = 512;
 static int texture_unit_size_dem = 3600;
-static int texture_unit_dinmension = 2;
+static int texture_unit_dinmension = 4;
 int texture_dinmension = texture_unit_size*texture_unit_dinmension;
 static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
 static uint32* texture;

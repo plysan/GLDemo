@@ -3,7 +3,7 @@
 #include<GL/glew.h>
 #include"physics.hpp"
 #include"constants.hpp"
-#include"quardtree.hpp"
+#include"quardtreeTerrain.hpp"
 #include"tools.hpp"
 
 float gravity = 0.1f;
