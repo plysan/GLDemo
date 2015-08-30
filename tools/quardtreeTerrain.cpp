@@ -126,6 +126,8 @@ void elevationOffset(glm::vec3 *result, double elevation_factor) {
     result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
 }
 
+float elevation_divisor = localcons::earth_radius * 10000.0f;
+
 void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
     if (nodeIndex >= maxNodes) {
         *node = NULL;
@@ -168,7 +170,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
             for (int i=0; i<dinmension; i++) {
                 TIFFReadEncodedStrip(tif, (int)((bl_coord_lat_texture_offset + (float)i/((float)dinmension - 1.0f) * (tr_coord.x - bl_coord.x)) * (float)texture_unit_size_dem), buf, TIFFStripSize(tif));
                 for (int j=0; j<dinmension; j++) {
-                    double elevation_factor = (((double)(short)buf[(int)((bl_coord_lng_texture_offset + (double)j/((double)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (double)texture_unit_size_dem)])/3000000.0f + 1.0f);
+                    double elevation_factor = (((double)(short)buf[(int)((bl_coord_lng_texture_offset + (double)j/((double)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (double)texture_unit_size_dem)])/elevation_divisor + 1.0f);
                     elevationOffset(&result[base_index++], elevation_factor);
                 }
             }
@@ -205,12 +207,12 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                         } else {
                             continue;
                         }
-                        elevationOffset(&result[base_index_unit], (((double)(short)buf[0])/3000000.0f + 1.0f));
+                        elevationOffset(&result[base_index_unit], (((double)(short)buf[0])/elevation_divisor + 1.0f));
                         int last_index_row = base_index_unit;
                         for (float k=scale_y; k<((float)(TIFFStripSize(tif)))/(float)sizeof(short); k+=scale_y) {
                             if (base_index_unit + (int)(k/scale_y) != last_index_row) {
                                 // The index of result cannot be plus one in every loop, but cast from float, why?
-                                elevationOffset(&result[base_index_unit + (int)(k/scale_y)], (((double)(short)buf[(int)(k)])/3000000.0f + 1.0f));
+                                elevationOffset(&result[base_index_unit + (int)(k/scale_y)], (((double)(short)buf[(int)(k)])/elevation_divisor + 1.0f));
                                 last_index_row = base_index_unit + (int)(k/scale_y);
                             }
                         }
