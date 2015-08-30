@@ -52,24 +52,24 @@ static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
 static uint32* texture;
 static int texture_unit_index = 0;
 
-glm::vec3* createQuardTreePos() {
-    result = new glm::vec3[maxNodes * dinmension * dinmension];
-    return result;
+int getQuardTreePosLength() {
+    return maxNodes * dinmension * dinmension;
 }
 
-glm::vec2* createQuardTreeUV() {
-    result_uv = new glm::vec2[maxNodes * dinmension * dinmension];
-    return result_uv;
+int getQuardTreeUVLength() {
+    return maxNodes * dinmension * dinmension;
 }
 
-unsigned int* createQuardTreeElementIndex() {
-    result_index = new unsigned int[maxNodes * ele_index_node_size];
-    return result_index;
+int getQuardTreeElementIndexLength() {
+    return maxNodes * ele_index_node_size;
 }
 
-glm::vec3* createQuardTreeNormal() {
-    result_normal = new glm::vec3[maxNodes * dinmension * dinmension];
-    return result_normal;
+int getQuardTreeNormalLength() {
+    return maxNodes * dinmension * dinmension;
+}
+
+int getTextureLength() {
+    return texture_dinmension*texture_dinmension;
 }
 
 glm::dvec3 calcMDPosFromCoord(float lat, float lng) {

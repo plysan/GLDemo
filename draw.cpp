@@ -178,8 +178,8 @@ int main( void )
 
     glGenBuffers(2, vertexbuffer);
     g_vertex_buffer_data = new glm::vec3*[2];
-    g_vertex_buffer_data[0] = createQuardTreePos();
-    g_vertex_buffer_data[1] = createQuardTreePos();
+    g_vertex_buffer_data[0] = new glm::vec3[getQuardTreePosLength()];
+    g_vertex_buffer_data[1] = new glm::vec3[getQuardTreePosLength()];
     using_buffer_data = g_vertex_buffer_data[0];
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_buffer_data[0], GL_STREAM_DRAW);
@@ -189,7 +189,7 @@ int main( void )
     g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, uvbuffer);
-    glm::vec2* g_vertex_uv_data = createQuardTreeUV();
+    glm::vec2* g_vertex_uv_data = new glm::vec2[getQuardTreeUVLength()];
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
@@ -199,7 +199,7 @@ int main( void )
     g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, normalbuffer);
-    glm::vec3* g_vertex_normal_data = createQuardTreeNormal();
+    glm::vec3* g_vertex_normal_data = new glm::vec3[getQuardTreeNormalLength()];
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[1]);
@@ -209,7 +209,7 @@ int main( void )
     g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, elementBuffer);
-    unsigned int* g_vertex_element_data = createQuardTreeElementIndex();
+    unsigned int* g_vertex_element_data = new unsigned int[getQuardTreeElementIndexLength()];
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[1]);
