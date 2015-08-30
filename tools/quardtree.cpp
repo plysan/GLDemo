@@ -72,14 +72,14 @@ glm::vec3* createQuardTreeNormal() {
     return result_normal;
 }
 
-double* calcMDPosFromCoord(float lat, float lng) {
+glm::dvec3 calcMDPosFromCoord(float lat, float lng) {
     double latD = (double)lat/180*localcons::pi;
     double lngD = (double)lng/180*localcons::pi;
-    return new double[3]{
+    return glm::dvec3(
         (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
         (double)localcons::earth_radius * std::sin(latD) - vertex_offset.y,
         (double)-localcons::earth_radius * std::cos(latD) * std::sin(lngD) - vertex_offset.z
-    };
+    );
 }
 
 void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
@@ -88,9 +88,9 @@ void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, g
     glm::vec2 ml_coord = glm::vec2((bl_coord.x+tr_coord.x)/2.0f, bl_coord.y);
     glm::vec2 mr_coord = glm::vec2((bl_coord.x+tr_coord.x)/2.0f, tr_coord.y);
     glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
-    doubleToGlmVec3(&result[mid_pos_index], calcMDPosFromCoord(mid_coord.x, mid_coord.y));
-    doubleToGlmVec3(&result[mid_pos_index + unit_size], calcMDPosFromCoord(mr_coord.x, mr_coord.y));
-    doubleToGlmVec3(&result[mid_pos_index + dinmension*unit_size], calcMDPosFromCoord(mb_coord.x, mb_coord.y));
+    result[mid_pos_index] = calcMDPosFromCoord(mid_coord.x, mid_coord.y);
+    result[mid_pos_index + unit_size] = calcMDPosFromCoord(mr_coord.x, mr_coord.y);
+    result[mid_pos_index + dinmension*unit_size] = calcMDPosFromCoord(mb_coord.x, mb_coord.y);
 
     glm::vec2 mid_uv = (bl_uv + tr_uv)/2.0f;
     glm::vec2 mr_uv = glm::vec2(tr_uv.x, mid_uv.y);
@@ -111,7 +111,7 @@ void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, g
 
 void interpolatePos1D(glm::vec2 frst_coord, glm::vec2 lst_coord, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
     glm::vec2 mid_coord = (frst_coord + lst_coord)/2.0f;
-    doubleToGlmVec3(&result[mid_pos_index], calcMDPosFromCoord(mid_coord.x, mid_coord.y));
+    result[mid_pos_index] = calcMDPosFromCoord(mid_coord.x, mid_coord.y);
     glm::vec2 mid_uv = (frst_uv + lst_uv)/2.0f;
     result_uv[mid_pos_index] = mid_uv;
     if (interval >= unit_size) {
@@ -132,20 +132,20 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         return;
     }
     int baseIndex = nodeIndex * dinmension * dinmension;
-    double* bl_pos = calcMDPosFromCoord(bl_coord.x, bl_coord.y);
-    double* br_pos = calcMDPosFromCoord(bl_coord.x, tr_coord.y);
-    double* tl_pos = calcMDPosFromCoord(tr_coord.x, bl_coord.y);
-    double* tr_pos = calcMDPosFromCoord(tr_coord.x, tr_coord.y);
+    glm::dvec3 bl_pos = calcMDPosFromCoord(bl_coord.x, bl_coord.y);
+    glm::dvec3 br_pos = calcMDPosFromCoord(bl_coord.x, tr_coord.y);
+    glm::dvec3 tl_pos = calcMDPosFromCoord(tr_coord.x, bl_coord.y);
+    glm::dvec3 tr_pos = calcMDPosFromCoord(tr_coord.x, tr_coord.y);
     interpolatePos2D(bl_coord, tr_coord, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
     interpolatePos1D(glm::vec2(tr_coord.x, bl_coord.y), tr_coord, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
     interpolatePos1D(glm::vec2(tr_coord.x, bl_coord.y), bl_coord, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
-    doubleToGlmVec3(&result[baseIndex], tl_pos);
+    result[baseIndex] = tl_pos;
     result_uv[baseIndex] = glm::vec2(bl_uv.x, tr_uv.y);
-    doubleToGlmVec3(&result[baseIndex + dinmension - 1], tr_pos);
+    result[baseIndex + dinmension - 1] = tr_pos;
     result_uv[baseIndex + dinmension - 1] = tr_uv;
-    doubleToGlmVec3(&result[baseIndex + dinmension * dinmension - 1], br_pos);
+    result[baseIndex + dinmension * dinmension - 1] = br_pos;
     result_uv[baseIndex + dinmension * dinmension - 1] = glm::vec2(tr_uv.x, bl_uv.y);
-    doubleToGlmVec3(&result[baseIndex + dinmension * (dinmension - 1)], bl_pos);
+    result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
     result_uv[baseIndex + dinmension * (dinmension - 1)] = bl_uv;
 
     int coords_spaned_x = (int)(tr_coord.x - bl_coord.x);
@@ -364,7 +364,7 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     }
 }
 
-glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
+glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
     if (texture_unit_index >= texture_unit_dinmension * texture_unit_dinmension) {
         texture_unit_index--;
     } else if (!detailed) {
@@ -389,17 +389,17 @@ glm::vec2* new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detaile
             }
         }
         if (!exist_any_img) {
-            return NULL;
+            return glm::vec2(-10.0f, -10.0f);
         }
     } else {
         int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
                 texture_unit_index % texture_unit_dinmension * texture_unit_size;
         if (!readImageToTexture(bl_coord, tr_coord, 1, 1, base_index_unit)) {
-            return NULL;
+            return glm::vec2(-10.0f, -10.0f);
         }
     }
     float delta = 1.0f/(float)texture_unit_dinmension;
-    glm::vec2* new_texture_unit_uv_base = new glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
+    glm::vec2 new_texture_unit_uv_base = glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
     texture_unit_index++;
     return new_texture_unit_uv_base;
 }
@@ -446,9 +446,9 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         if (texture_unit_index < texture_units) {//TODO: Height map size def
             float delta_coord = tr_coord.x-bl_coord.x;
             bool detailed = delta_coord < 1.0f;
-            glm::vec2* temp_bl_uv = new_texture_unit(bl_coord, tr_coord, detailed);
-            if (temp_bl_uv != NULL) {
-                bl_uv = *temp_bl_uv;
+            glm::vec2 temp_bl_uv = new_texture_unit(bl_coord, tr_coord, detailed);
+            if (temp_bl_uv.x != -10.0f) {
+                bl_uv = temp_bl_uv;
                 tr_uv = bl_uv + glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension);
             }
         }

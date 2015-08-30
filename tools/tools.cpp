@@ -29,12 +29,6 @@ double* midPos3D(double *a, double *b) {
     return new double[3] {(a[0] + b[0])/2, (a[1] + b[1])/2, (a[2] + b[2])/2};
 }
 
-void doubleToGlmVec3(glm::vec3 *result, double *value) {
-    result->x = value[0];
-    result->y = value[1];
-    result->z = value[2];
-}
-
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
     float radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
     float lat = atan(pos.y/radius_xz)/localcons::pi*180.0f;
