@@ -72,16 +72,6 @@ int getTextureLength() {
     return texture_dinmension*texture_dinmension;
 }
 
-glm::dvec3 calcMDPosFromCoord(float lat, float lng) {
-    double latD = (double)lat/180*localcons::pi;
-    double lngD = (double)lng/180*localcons::pi;
-    return glm::dvec3(
-        (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(latD) - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(latD) * std::sin(lngD) - vertex_offset.z
-    );
-}
-
 void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
     glm::vec2 mt_coord = glm::vec2(tr_coord.x, (bl_coord.y+tr_coord.y)/2.0f);
     glm::vec2 mb_coord = glm::vec2(bl_coord.x, (bl_coord.y+tr_coord.y)/2.0f);
