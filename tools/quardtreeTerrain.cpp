@@ -72,12 +72,12 @@ int getTextureLength() {
     return texture_dinmension*texture_dinmension;
 }
 
-void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
-    glm::vec2 mt_coord = glm::vec2(tr_coord.x, (bl_coord.y+tr_coord.y)/2.0f);
-    glm::vec2 mb_coord = glm::vec2(bl_coord.x, (bl_coord.y+tr_coord.y)/2.0f);
-    glm::vec2 ml_coord = glm::vec2((bl_coord.x+tr_coord.x)/2.0f, bl_coord.y);
-    glm::vec2 mr_coord = glm::vec2((bl_coord.x+tr_coord.x)/2.0f, tr_coord.y);
-    glm::vec2 mid_coord = (bl_coord + tr_coord)/2.0f;
+void interpolatePos2D(glm::dvec2 bl_coord, glm::dvec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
+    glm::dvec2 mt_coord = glm::dvec2(tr_coord.x, (bl_coord.y+tr_coord.y)/2.0);
+    glm::dvec2 mb_coord = glm::dvec2(bl_coord.x, (bl_coord.y+tr_coord.y)/2.0);
+    glm::dvec2 ml_coord = glm::dvec2((bl_coord.x+tr_coord.x)/2.0, bl_coord.y);
+    glm::dvec2 mr_coord = glm::dvec2((bl_coord.x+tr_coord.x)/2.0, tr_coord.y);
+    glm::dvec2 mid_coord = (bl_coord + tr_coord)/2.0;
     result[mid_pos_index] = calcMDPosFromCoord(mid_coord.x, mid_coord.y);
     result[mid_pos_index + unit_size] = calcMDPosFromCoord(mr_coord.x, mr_coord.y);
     result[mid_pos_index + dinmension*unit_size] = calcMDPosFromCoord(mb_coord.x, mb_coord.y);
@@ -99,8 +99,8 @@ void interpolatePos2D(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, g
     }
 }
 
-void interpolatePos1D(glm::vec2 frst_coord, glm::vec2 lst_coord, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
-    glm::vec2 mid_coord = (frst_coord + lst_coord)/2.0f;
+void interpolatePos1D(glm::dvec2 frst_coord, glm::dvec2 lst_coord, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
+    glm::dvec2 mid_coord = (frst_coord + lst_coord)/2.0;
     result[mid_pos_index] = calcMDPosFromCoord(mid_coord.x, mid_coord.y);
     glm::vec2 mid_uv = (frst_uv + lst_uv)/2.0f;
     result_uv[mid_pos_index] = mid_uv;
@@ -124,13 +124,15 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         return;
     }
     int baseIndex = nodeIndex * dinmension * dinmension;
-    glm::dvec3 bl_pos = calcMDPosFromCoord(bl_coord.x, bl_coord.y);
-    glm::dvec3 br_pos = calcMDPosFromCoord(bl_coord.x, tr_coord.y);
-    glm::dvec3 tl_pos = calcMDPosFromCoord(tr_coord.x, bl_coord.y);
-    glm::dvec3 tr_pos = calcMDPosFromCoord(tr_coord.x, tr_coord.y);
-    interpolatePos2D(bl_coord, tr_coord, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
-    interpolatePos1D(glm::vec2(tr_coord.x, bl_coord.y), tr_coord, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
-    interpolatePos1D(glm::vec2(tr_coord.x, bl_coord.y), bl_coord, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
+    glm::dvec2 bl_coord_arc = glm::dvec2((double)bl_coord.x/180*localcons::pi, (double)bl_coord.y/180*localcons::pi);
+    glm::dvec2 tr_coord_arc = glm::dvec2((double)tr_coord.x/180*localcons::pi, (double)tr_coord.y/180*localcons::pi);
+    glm::dvec3 bl_pos = calcMDPosFromCoord(bl_coord_arc.x, bl_coord_arc.y);
+    glm::dvec3 br_pos = calcMDPosFromCoord(bl_coord_arc.x, tr_coord_arc.y);
+    glm::dvec3 tl_pos = calcMDPosFromCoord(tr_coord_arc.x, bl_coord_arc.y);
+    glm::dvec3 tr_pos = calcMDPosFromCoord(tr_coord_arc.x, tr_coord_arc.y);
+    interpolatePos2D(bl_coord_arc, tr_coord_arc, bl_uv, tr_uv, baseIndex + dinmension*dinmension/2, dinmension/2);
+    interpolatePos1D(glm::dvec2(tr_coord_arc.x, bl_coord_arc.y), tr_coord_arc, glm::vec2(bl_uv.x, tr_uv.y), tr_uv, baseIndex + dinmension/2, dinmension/4, 1);
+    interpolatePos1D(glm::dvec2(tr_coord_arc.x, bl_coord_arc.y), bl_coord_arc, glm::vec2(bl_uv.x, tr_uv.y), bl_uv, baseIndex + dinmension/2*dinmension, dinmension/4*dinmension, dinmension);
     result[baseIndex] = tl_pos;
     result_uv[baseIndex] = glm::vec2(bl_uv.x, tr_uv.y);
     result[baseIndex + dinmension - 1] = tr_pos;

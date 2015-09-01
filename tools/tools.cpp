@@ -26,13 +26,11 @@ glm::vec3 calcFPosFromCoord(float lat, float lng) {
             );
 }
 
-glm::dvec3 calcMDPosFromCoord(float lat, float lng) {
-    double latD = (double)lat/180*localcons::pi;
-    double lngD = (double)lng/180*localcons::pi;
+glm::dvec3 calcMDPosFromCoord(double lat, double lng) {
     return glm::dvec3(
-        (double)localcons::earth_radius * std::cos(latD) * std::cos(lngD) - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(latD) - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(latD) * std::sin(lngD) - vertex_offset.z
+        (double)localcons::earth_radius * std::cos(lat) * std::cos(lng) - vertex_offset.x,
+        (double)localcons::earth_radius * std::sin(lat) - vertex_offset.y,
+        (double)-localcons::earth_radius * std::cos(lat) * std::sin(lng) - vertex_offset.z
     );
 }
 
