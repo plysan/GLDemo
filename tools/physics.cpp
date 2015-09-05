@@ -2,7 +2,7 @@
 #include<glm/glm.hpp>
 #include<GL/glew.h>
 #include"physics.hpp"
-#include"constants.hpp"
+#include"vars.hpp"
 #include"quardtreeTerrain.hpp"
 #include"tools.hpp"
 

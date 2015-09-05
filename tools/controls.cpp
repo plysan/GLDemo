@@ -3,7 +3,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "constants.hpp"
+#include "vars.hpp"
 #include "tools.hpp"
 #include "physics.hpp"
 #include "quardtreeTerrain.hpp"

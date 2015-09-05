@@ -12,6 +12,8 @@
 #include "tools/controls.hpp"
 #include "tools/quardtreeTerrain.hpp"
 #include "tools/physics.hpp"
+#include "tools/skydome.hpp"
+#include "tools/vars.hpp"
 
 extern glm::vec3 viewPos;
 // to store viewPos upon quardtree update
@@ -78,6 +80,8 @@ void updateData(bool loop)
             g_mapped_texture_array_data,
             &new_node
             );
+        createSkydome(g_vertex_buffer_data[renderingBufferIndex], &quardTreeLength, g_mapped_vertex_element_data, &elemantIndexLength,
+            glm::vec2(20.0f, -156.0f), 6, 1, 10);
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d\n", quardTreeLength, elemantIndexLength, nodeIndex);
 
@@ -158,6 +162,9 @@ int main( void )
     GLuint LightPositionID = glGetUniformLocation( programID, "LightPosition_worldspace" );
 
     setPosCoord(20.0f, -156.0f, 0.7f);
+    updateSkydomeConf(6, 10);
+    int vertex_buffer_length = getQuardTreePosLength() + getSkydomePosLength();
+    int element_buffer_length = getQuardTreeElementIndexLength() + getSkydomePosLength();
     using_vertex_offset = vertex_offset;
     vertex_offset_snap = using_vertex_offset;
 
@@ -178,45 +185,45 @@ int main( void )
 
     glGenBuffers(2, vertexbuffer);
     g_vertex_buffer_data = new glm::vec3*[2];
-    g_vertex_buffer_data[0] = new glm::vec3[getQuardTreePosLength()];
-    g_vertex_buffer_data[1] = new glm::vec3[getQuardTreePosLength()];
+    g_vertex_buffer_data[0] = new glm::vec3[vertex_buffer_length];
+    g_vertex_buffer_data[1] = new glm::vec3[vertex_buffer_length];
     using_buffer_data = g_vertex_buffer_data[0];
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_buffer_data[0], GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, g_vertex_buffer_data[0], GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_buffer_data[1], GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, g_vertex_buffer_data[1], GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
-    g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, uvbuffer);
     glm::vec2* g_vertex_uv_data = new glm::vec2[getQuardTreeUVLength()];
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), g_vertex_uv_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, g_vertex_uv_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), g_vertex_uv_data, GL_STREAM_DRAW);
     delete[] g_vertex_uv_data;
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-    g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*getQuardTreeUVLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, normalbuffer);
     glm::vec3* g_vertex_normal_data = new glm::vec3[getQuardTreeNormalLength()];
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*getQuardTreeNormalLength(), g_vertex_normal_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, g_vertex_normal_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*getQuardTreeNormalLength(), g_vertex_normal_data, GL_STREAM_DRAW);
     delete[] g_vertex_normal_data;
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
-    g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*getQuardTreeNormalLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, elementBuffer);
-    unsigned int* g_vertex_element_data = new unsigned int[getQuardTreeElementIndexLength()];
+    unsigned int* g_vertex_element_data = new unsigned int[element_buffer_length];
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*element_buffer_length, g_vertex_element_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, g_vertex_element_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*element_buffer_length, g_vertex_element_data, GL_STREAM_DRAW);
     delete[] g_vertex_element_data;
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-    g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
     
     glUseProgram(programID);
 
@@ -257,21 +264,21 @@ int main( void )
         if (frameCounter%200 == update_frame_interval*2 && updating == false && unmapping == false) {
             //orphaning and mapping the buffers that is not used and to be updated
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             if (NULL == g_mapped_vertex_buffer_data) {
                 std::cout << "Error: " << glGetError() << std::endl;
                 throw std::runtime_error("Failed to map buffer.");
             }
             glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*vertexBufferSize, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*getQuardTreeUVLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertexBufferSize, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertexBufferSize, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*getQuardTreeNormalLength(), NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*getQuardTreeNormalLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*ele_index_size, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*ele_index_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*element_buffer_length, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
             glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, NULL, GL_STREAM_DRAW);
             g_mapped_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*texture_dinmension*texture_dinmension, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);

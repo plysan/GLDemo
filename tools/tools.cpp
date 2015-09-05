@@ -7,7 +7,7 @@
 #include <sstream>
 #include <tiffio.h>
 #include <glm/glm.hpp>
-#include "constants.hpp"
+#include "vars.hpp"
 #include "quardtreeTerrain.hpp"
 
 using namespace std;
@@ -24,14 +24,6 @@ glm::vec3 calcFPosFromCoord(float lat, float lng) {
             localcons::earth_radius * sin(lat),
             -localcons::earth_radius * cos(lat) * sin(lng)
             );
-}
-
-glm::dvec3 calcMDPosFromCoord(double lat, double lng) {
-    return glm::dvec3(
-        (double)localcons::earth_radius * std::cos(lat) * std::cos(lng) - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(lat) - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(lat) * std::sin(lng) - vertex_offset.z
-    );
 }
 
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
