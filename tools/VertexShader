@@ -15,7 +15,6 @@ uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
 uniform vec3 LightPosition_worldspace;
-uniform sampler2D myTextureSampler;
 
 void main(){
 

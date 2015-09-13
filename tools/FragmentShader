@@ -10,7 +10,7 @@ in vec2 uv;
 out vec3 color;
 
 uniform vec3 LightPosition_worldspace;
-uniform sampler2D myTextureSampler;
+uniform sampler2D terrain_texture_sampler;
 
 void main()
 {
@@ -20,7 +20,7 @@ void main()
     float LightPower = 200000000.0f;
 
     // Material properties
-    vec4 MaterialRGBAColor = texture2D( myTextureSampler, uv );
+    vec4 MaterialRGBAColor = texture2D( terrain_texture_sampler, uv );
     vec3 MaterialDiffuseColor = vec3(0.01, 0.01, 0.01) + MaterialRGBAColor.rgb;
     vec3 MaterialAmbientColor = vec3(0.4, 0.4, 0.4) * MaterialDiffuseColor;
     vec3 MaterialSpecularColor = vec3(1.0-MaterialRGBAColor.a, 1.0-MaterialRGBAColor.a, 1.0-MaterialRGBAColor.a);

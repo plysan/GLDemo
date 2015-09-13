@@ -1,6 +1,6 @@
 extern glm::vec3* result;
 extern int dinmension;
-extern int texture_dinmension;
+extern int terrain_texture_size;
 extern int maxNodes;
 extern int nodeIndex;
 extern int vertexBufferSize;
