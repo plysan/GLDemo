@@ -159,7 +159,7 @@ int main( void )
     GLuint matrixMVPID = glGetUniformLocation( programID, "MVP" );
     GLuint matrixMID = glGetUniformLocation( programID, "M" );
     GLuint matrixVID = glGetUniformLocation( programID, "V" );
-    GLuint LightPositionID = glGetUniformLocation( programID, "LightPosition_worldspace" );
+    GLuint sun_worldspace_uniform_id = glGetUniformLocation( programID, "sun_ws" );
 
     setPosCoord(20.0f, -156.0f, 0.7f);
     updateSkydomeConf(6, 10);
@@ -299,7 +299,7 @@ int main( void )
         glUniformMatrix4fv(matrixMID, 1, GL_FALSE, &M[0][0]);
         glUniformMatrix4fv(matrixVID, 1, GL_FALSE, &V[0][0]);
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
-        glUniform3f(LightPositionID, lightPos.x, lightPos.y, lightPos.z);
+        glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
 
         //glDrawArrays(GL_POINTS, 0, quardTreeLength);
         glDrawElements(GL_TRIANGLE_STRIP, elemantIndexLengthForRendering, GL_UNSIGNED_INT, (void*)0);

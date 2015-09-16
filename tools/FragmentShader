@@ -1,59 +1,47 @@
 #version 330 core
 
-in vec3 Position_worldspace;
-in vec3 Normal_cameraspace;
-in vec3 EyeDirection_cameraspace;
-in vec3 LightDirection_cameraspace;
+in vec3 vertex_ws;
+in vec3 vertex_normal_cs;
+in vec3 vertex_origin_dir_cs;
+in vec3 vertex_sun_dir_cs;
 in vec2 uv;
 
-// Ouput data
 out vec3 color;
 
-uniform vec3 LightPosition_worldspace;
+uniform vec3 sun_ws;
 uniform sampler2D terrain_texture_sampler;
 
 void main()
 {
-    // Light emission properties
-    // You probably want to put them as uniforms
-    vec3 LightColor = vec3(1,1,1);
-    float LightPower = 200000000.0f;
+    vec3 sun_color = vec3(1,1,1);
+    float sun_power = 200000000.0f;
 
-    // Material properties
-    vec4 MaterialRGBAColor = texture2D( terrain_texture_sampler, uv );
-    vec3 MaterialDiffuseColor = vec3(0.01, 0.01, 0.01) + MaterialRGBAColor.rgb;
-    vec3 MaterialAmbientColor = vec3(0.4, 0.4, 0.4) * MaterialDiffuseColor;
-    vec3 MaterialSpecularColor = vec3(1.0-MaterialRGBAColor.a, 1.0-MaterialRGBAColor.a, 1.0-MaterialRGBAColor.a);
+    vec4 terrain_rgba = texture2D( terrain_texture_sampler, uv );
+    vec3 terrain_diffuse = vec3(0.01, 0.01, 0.01) + terrain_rgba.rgb;
+    vec3 terrain_ambient = vec3(0.4, 0.4, 0.4) * terrain_diffuse;
+    vec3 terrain_specular = vec3(1.0-terrain_rgba.a, 1.0-terrain_rgba.a, 1.0-terrain_rgba.a);
 
-    // Distance to the light
-    float distance = length( LightPosition_worldspace - Position_worldspace );
+    float sun_vertex_distance = length( sun_ws - vertex_ws );
 
-    // Normal of the computed fragment, in camera space
-    vec3 n = normalize( Normal_cameraspace );
-    // Direction of the light (from the fragment to the light)
-    vec3 l = normalize( LightDirection_cameraspace );
+    vec3 vertex_normal_normal_cs = normalize( vertex_normal_cs );
+    vec3 vertex_sun_dir_normal_cs = normalize( vertex_sun_dir_cs );
     // Cosine of the angle between the normal and the light direction,
     // clamped above 0
     //  - light is at the vertical of the triangle -> 1
     //  - light is perpendicular to the triangle -> 0
     //  - light is behind the triangle -> 0
-    float cosTheta = clamp( dot( n,l ), 0,1 );
+    float cos_sun_vertex_normal = clamp( dot( vertex_normal_normal_cs,vertex_sun_dir_normal_cs ), 0,1 );
 
-    // Eye vector (towards the camera)
-    vec3 E = normalize(EyeDirection_cameraspace);
-    // Direction in which the triangle reflects the light
-    vec3 R = reflect(-l,n);
+    vec3 vertex_origin_dir_normal_cs = normalize(vertex_origin_dir_cs);
+    vec3 reflect_sun_vertex_cs = reflect(-vertex_sun_dir_normal_cs, vertex_normal_normal_cs);
     // Cosine of the angle between the Eye vector and the Reflect vector,
     // clamped to 0
     //  - Looking into the reflection -> 1
     //  - Looking elsewhere -> < 1
-    float cosAlpha = clamp( dot( E,R ), 0,1 );
+    float cos_origin_vertex_reflect = clamp( dot( vertex_origin_dir_normal_cs,reflect_sun_vertex_cs ), 0,1 );
 
     color =
-        // Ambient : simulates indirect lighting
-        MaterialAmbientColor +
-        // Diffuse : "color" of the object
-        MaterialDiffuseColor * LightColor * LightPower * cosTheta / (distance) +
-        // Specular : reflective highlight, like a mirror
-        MaterialSpecularColor * LightColor * LightPower * pow(cosAlpha,7) / (distance);
+        terrain_ambient +
+        terrain_diffuse * sun_color * sun_power * cos_sun_vertex_normal / (sun_vertex_distance) +
+        terrain_specular * sun_color * sun_power * pow(cos_origin_vertex_reflect,7) / (sun_vertex_distance);
 }
