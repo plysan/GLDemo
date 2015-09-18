@@ -5,21 +5,26 @@ in vec3 vertex_normal_cs;
 in vec3 vertex_origin_dir_cs;
 in vec3 vertex_sun_dir_cs;
 in vec2 uv;
+in vec2 scatter_angles;
+in float vertex_distance;
 
 out vec3 color;
 
 uniform vec3 sun_ws;
 uniform sampler2D terrain_texture_sampler;
+uniform sampler3D scatter_texture_sampler;
+uniform float scatter_height;
 
 void main()
 {
     vec3 sun_color = vec3(1,1,1);
     float sun_power = 200000000.0f;
 
-    vec4 terrain_rgba = texture2D( terrain_texture_sampler, uv );
+    vec4 terrain_rgba = texture(terrain_texture_sampler, uv);
     vec3 terrain_diffuse = vec3(0.01, 0.01, 0.01) + terrain_rgba.rgb;
     vec3 terrain_ambient = vec3(0.4, 0.4, 0.4) * terrain_diffuse;
     vec3 terrain_specular = vec3(1.0-terrain_rgba.a, 1.0-terrain_rgba.a, 1.0-terrain_rgba.a);
+    vec4 scatter_rgba = texture(scatter_texture_sampler, vec3(scatter_angles, clamp(scatter_height, 0.03125, 0.96875)));
 
     float sun_vertex_distance = length( sun_ws - vertex_ws );
 
@@ -40,8 +45,9 @@ void main()
     //  - Looking elsewhere -> < 1
     float cos_origin_vertex_reflect = clamp( dot( vertex_origin_dir_normal_cs,reflect_sun_vertex_cs ), 0,1 );
 
+    float factor = scatter_rgba.a*(clamp(vertex_distance/100, 0, 1));
     color =
-        terrain_ambient +
+        scatter_rgba.rgb*factor + (1-factor) * (terrain_ambient +
         terrain_diffuse * sun_color * sun_power * cos_sun_vertex_normal / (sun_vertex_distance) +
-        terrain_specular * sun_color * sun_power * pow(cos_origin_vertex_reflect,7) / (sun_vertex_distance);
+        terrain_specular * sun_color * sun_power * pow(cos_origin_vertex_reflect,7) / (sun_vertex_distance));
 }

@@ -9,11 +9,14 @@ out vec3 vertex_normal_cs;
 out vec3 vertex_origin_dir_cs;
 out vec3 vertex_sun_dir_cs;
 out vec2 uv;
+out vec2 scatter_angles;
+out float vertex_distance;
 
 uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
 uniform vec3 sun_ws;
+uniform vec3 vertex_offset_ws;
 
 void main(){
 
@@ -23,12 +26,18 @@ void main(){
 
     vec3 vertex_pos_cs = ( V * M * vec4(vertex_pos_ms,1)).xyz;
     vertex_origin_dir_cs = vec3(0,0,0) - vertex_pos_cs;
+    vertex_distance = length(vertex_pos_cs);
 
     vec3 sun_cs = ( V * vec4(sun_ws,1)).xyz;
     vertex_sun_dir_cs = sun_cs + vertex_origin_dir_cs;
 
     vertex_normal_cs = ( V * M * vec4(vertex_normal_ms,0)).xyz; // Only correct if ModelMatrix does not scale the model ! Use its inverse transpose if not.
     uv = vertex_uv_ms;
+
+    vec3 up_cs = normalize((V * M * vec4(vertex_ws + vertex_offset_ws,0)).xyz);
+    float scatter_view_angle = clamp(acos(dot(-up_cs, -normalize(vertex_origin_dir_cs)))/3.1415927, 0.03125, 0.96875);
+    float scatter_sun_angle = clamp(acos(dot(-up_cs, normalize(sun_cs)))/3.1415927, 0.03125, 0.96875);
+    scatter_angles = vec2(scatter_sun_angle, scatter_view_angle);
 
 }
 
