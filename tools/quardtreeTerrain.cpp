@@ -48,7 +48,7 @@ static int texture_unit_size = 512;
 static int texture_unit_size_dem = 3600;
 static int texture_unit_dinmension = 4;
 int terrain_texture_size = texture_unit_size*texture_unit_dinmension;
-static int texture_units = texture_unit_dinmension * texture_unit_dinmension;
+static int terrain_texture_units = texture_unit_dinmension * texture_unit_dinmension - 1;
 static uint32* texture;
 static int texture_unit_index = 0;
 
@@ -367,7 +367,7 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
 }
 
 glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
-    if (texture_unit_index >= texture_unit_dinmension * texture_unit_dinmension) {
+    if (texture_unit_index >= terrain_texture_units) {
         texture_unit_index--;
     } else if (!detailed) {
         readGlobalImageToTexture(bl_coord, tr_coord);
@@ -445,7 +445,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         glm::vec2 ml_coord = glm::vec2(mid_coord.x, bl_coord.y);
         glm::vec2 mr_coord = glm::vec2(mid_coord.x, tr_coord.y);
 
-        if (texture_unit_index < texture_units) {//TODO: Height map size def
+        if (texture_unit_index < terrain_texture_units) {//TODO: Height map size def
             float delta_coord = tr_coord.x-bl_coord.x;
             bool detailed = delta_coord < 1.0f;
             glm::vec2 temp_bl_uv = new_texture_unit(bl_coord, tr_coord, detailed);
