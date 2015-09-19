@@ -149,7 +149,7 @@ int main( void )
     }
 
     glfwSetCursorPos(window, windowW/2, windowH/2);
-    glClearColor(0.0f, 0.0f, 0.1f, 0.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glEnable(GL_DEPTH_TEST);
     //glDepthFunc(GL_LESS);
 
