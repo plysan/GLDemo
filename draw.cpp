@@ -37,9 +37,10 @@ glm::vec2* g_mapped_vertex_uv_data;
 glm::vec3* g_mapped_vertex_normal_data;
 unsigned int* g_mapped_vertex_element_data;
 glm::detail::uint32* g_mapped_terrain_texture_array_data;
-int quardTreeLength = 0;
-int elemantIndexLength = 0;
-int elemantIndexLengthForRendering = 0;
+int elemant_index_terrain_length_update = 0;
+int elemant_index_terrain_length_rendering = 0;
+int elemant_index_sky_length_update = 0;
+int elemant_index_sky_length_rendering = 0;
 
 int frameCounter = 205;
 int renderingBufferIndex = 0;
@@ -60,8 +61,8 @@ void updateData(bool loop)
         if (!updating) {
             continue;
         }
-        quardTreeLength=0;
-        elemantIndexLength=0;
+        int quardtree_length_update = 0;
+        int elemant_index_length_update = 0;
         clock_t before = clock();
         viewPos_cached = viewPos;
         vertex_offset += viewPos_cached;
@@ -71,24 +72,26 @@ void updateData(bool loop)
         createQuardTree(
             glm::vec2(17.0f, -160.0f),
             glm::vec2(24.0f, -153.0f),
-            &quardTreeLength,
+            &quardtree_length_update,
             g_vertex_buffer_data[renderingBufferIndex],
             g_mapped_vertex_uv_data,
             g_mapped_vertex_normal_data,
-            &elemantIndexLength,
+            &elemant_index_length_update,
             g_mapped_vertex_element_data,
             g_mapped_terrain_texture_array_data,
             &new_node
             );
+        elemant_index_terrain_length_update = elemant_index_length_update;
         createSkydome(
-            g_vertex_buffer_data[renderingBufferIndex], &quardTreeLength,
-            g_mapped_vertex_element_data, &elemantIndexLength,
+            g_vertex_buffer_data[renderingBufferIndex], &quardtree_length_update,
+            g_mapped_vertex_element_data, &elemant_index_length_update,
             g_mapped_vertex_uv_data,
             glm::vec2(20.0f, -156.0f), 6, 1, 10);
+        elemant_index_sky_length_update = elemant_index_length_update - elemant_index_terrain_length_update;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
-        printf("points: %d, indices: %d, nodes:%d\n", quardTreeLength, elemantIndexLength, nodeIndex);
+        printf("points: %d, indices: %d, nodes:%d\n", quardtree_length_update, elemant_index_length_update, nodeIndex);
 
-        std::copy(&g_vertex_buffer_data[renderingBufferIndex][0], &g_vertex_buffer_data[renderingBufferIndex][quardTreeLength], g_mapped_vertex_buffer_data);
+        std::copy(&g_vertex_buffer_data[renderingBufferIndex][0], &g_vertex_buffer_data[renderingBufferIndex][quardtree_length_update], g_mapped_vertex_buffer_data);
 
         unmapping = true;
         updating = false;
@@ -150,8 +153,6 @@ int main( void )
 
     glfwSetCursorPos(window, windowW/2, windowH/2);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glEnable(GL_DEPTH_TEST);
-    //glDepthFunc(GL_LESS);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -268,7 +269,6 @@ int main( void )
     do{
         if (frameCounter%200 == update_frame_interval && updating == false && unmapping == false) {
             //use the buffers that is updated
-            elemantIndexLengthForRendering = elemantIndexLength;
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
@@ -279,6 +279,9 @@ int main( void )
             glActiveTexture(GL_TEXTURE0 + terrain_texture_unit_id);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, terrain_texture_size, terrain_texture_size, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 
+            //update vars
+            elemant_index_terrain_length_rendering = elemant_index_terrain_length_update;
+            elemant_index_sky_length_rendering = elemant_index_sky_length_update;
             viewPos = viewPos - viewPos_cached;
             using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
             using_vertex_offset = vertex_offset_snap;
@@ -328,8 +331,12 @@ int main( void )
         glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
         glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-localcons::earth_radius)/10.0f);
 
-        //glDrawArrays(GL_POINTS, 0, quardTreeLength);
-        glDrawElements(GL_TRIANGLE_STRIP, elemantIndexLengthForRendering, GL_UNSIGNED_INT, (void*)0);
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>(elemant_index_terrain_length_rendering*4));
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_terrain_length_rendering, GL_UNSIGNED_INT, (void*)0);
 
         // Swap buffers
         glfwSwapBuffers(window);
