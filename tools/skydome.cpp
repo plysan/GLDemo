@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 #include <GL/glew.h>
 #include "vars.hpp"
 
@@ -19,17 +20,19 @@ void updateSkydomeConf(int circular_count, int radius_count) {
     g_radius_count = radius_count;
 }
 
-glm::dvec3 calcMDSkyPosFromCoord(double lat, double lng) {
-    return glm::dvec3(
-        (double)localcons::earth_radius * std::cos(lat) * std::cos(lng) * 1.1 - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(lat) * 1.1 - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(lat) * std::sin(lng) * 1.1 - vertex_offset.z
+glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_origin, float lng_origin) {
+    glm::vec3 pos = glm::vec3(
+        (double)localcons::earth_radius * std::cos(lat_offset) * std::cos(lng_offset) * 1.1,
+        (double)localcons::earth_radius * std::sin(lat_offset) * 1.1,
+        (double)-localcons::earth_radius * std::cos(lat_offset) * std::sin(lng_offset) * 1.1
     );
+    pos = glm::rotate(pos, 90.0f-lat_origin, glm::vec3(0.0f, 0.0f, -1.0f));
+    pos = glm::rotate(pos, lng_origin, glm::vec3(0.0f, 1.0f, 0.0f));
+    pos -= vertex_offset;
+    return pos;
 }
 
 void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_index, int* element_index_offset, glm::vec2* vertex_uv, glm::vec2 view_coord, int circular_count, float radius_range, int radius_count) {
-    view_coord.x = view_coord.x/180.0f*localcons::pi;
-    view_coord.y = view_coord.y/180.0f*localcons::pi;
     int vertex_offset_init = *vertex_offset;
     int pointer = vertex_offset_init;
     float circle_interval = 2*localcons::pi/circular_count;
@@ -37,7 +40,7 @@ void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_
     glm::vec2 zero_color_uv = glm::vec2(0.99f, 0.99f);
     for (int i=0; i<radius_count; i++) {
         for (int j=0; j<circular_count; j++) {
-            vertex[pointer] = calcMDSkyPosFromCoord(i * radius_interval * sin(j*circle_interval) + view_coord.x, i * radius_interval * cos(j*circle_interval) + view_coord.y);
+            vertex[pointer] = calcMDSkyPosFromCoord(localcons::pi/2 - radius_interval*i, circle_interval*j, view_coord.x, view_coord.y);
             vertex_uv[pointer++] = zero_color_uv;
         }
     }
