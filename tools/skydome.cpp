@@ -177,7 +177,6 @@ float height_0_rayleigh = 0.8f;
 // decrease/increase to be more/less blue
 float intensity_integral_precision_maintain_coefficient = 0.03f;
 float integral_ciexyz_clamp_coefficient = 1.0f/91.0f;
-int negative_compensate = 12;
 
 float height_coefficient(float lambda, glm::vec3 height_pos) {
     float height = glm::length(height_pos)-localcons::earth_radius;
