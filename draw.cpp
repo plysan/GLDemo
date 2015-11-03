@@ -203,7 +203,7 @@ int main( void )
     glBindTexture(GL_TEXTURE_3D, scatter_texture_id);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    fillScatterTexture(g_scatter_texture_array_data, 16);
+    fillScatterTexture(g_scatter_texture_array_data, 8);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 16, 16, 16, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_scatter_texture_array_data);
     delete[] g_scatter_texture_array_data;
@@ -329,7 +329,8 @@ int main( void )
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
         glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
-        glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-localcons::earth_radius)/10.0f);
+        // clamp height withn atmosphere boundary temporarily
+        glUniform1f(scatter_height_uniform_id, glm::clamp((glm::length(viewPos+using_vertex_offset)-localcons::earth_radius)/(localcons::atmosphere_top_radius-localcons::earth_radius), 0.0f, 1.0f));
 
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);

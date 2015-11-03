@@ -5,7 +5,7 @@ in vec3 vertex_normal_cs;
 in vec3 vertex_origin_dir_cs;
 in vec3 vertex_sun_dir_cs;
 in vec2 uv;
-in vec2 scatter_angles;
+in vec3 scatter_angles;
 in float vertex_distance;
 
 out vec3 color;
@@ -14,6 +14,24 @@ uniform vec3 sun_ws;
 uniform sampler2D terrain_texture_sampler;
 uniform sampler3D scatter_texture_sampler;
 uniform float scatter_height;
+
+vec4 texture4D()
+{
+    int height_unormalize = int(scatter_height * 7);
+    float height_middle_offset = scatter_height * 7 - height_unormalize;
+    int xy_remainder = height_unormalize % 4;
+    float z = float(height_unormalize / 4) / 2;
+    float y = float(xy_remainder / 2) / 2;
+    float x = float(xy_remainder % 2) / 2;
+    vec4 color_0 = texture(scatter_texture_sampler, vec3(scatter_angles.x+x, scatter_angles.y+y, scatter_angles.z+z));
+    height_unormalize++;
+    xy_remainder = height_unormalize % 4;
+    z = float(height_unormalize / 4) / 2;
+    y = float(xy_remainder / 2) / 2;
+    x = float(xy_remainder % 2) / 2;
+    vec4 color_1 = texture(scatter_texture_sampler, vec3(scatter_angles.x+x, scatter_angles.y+y, scatter_angles.z+z));
+    return color_0 * (1.0 - height_middle_offset) + color_1 * height_middle_offset;
+}
 
 void main()
 {
@@ -24,7 +42,7 @@ void main()
     vec3 terrain_diffuse = vec3(0.01, 0.01, 0.01) + terrain_rgba.rgb;
     vec3 terrain_ambient = vec3(0.4, 0.4, 0.4) * terrain_diffuse;
     vec3 terrain_specular = vec3(1.0-terrain_rgba.a, 1.0-terrain_rgba.a, 1.0-terrain_rgba.a);
-    vec4 scatter_rgba = texture(scatter_texture_sampler, vec3(scatter_angles, clamp(scatter_height, 0.03125, 0.96875)));
+    vec4 scatter_rgba = texture4D();
 
     float sun_vertex_distance = length( sun_ws - vertex_ws );
 
@@ -45,7 +63,7 @@ void main()
     //  - Looking elsewhere -> < 1
     float cos_origin_vertex_reflect = clamp( dot( vertex_origin_dir_normal_cs,reflect_sun_vertex_cs ), 0,1 );
 
-    float factor = scatter_rgba.a*(clamp(vertex_distance/100, 0, 1));
+    float factor = 1.0;// set to 1.0 temporarily to preview sky color
     color =
         scatter_rgba.rgb*factor + (1-factor) * (terrain_ambient +
         terrain_diffuse * sun_color * sun_power * cos_sun_vertex_normal / (sun_vertex_distance) +
