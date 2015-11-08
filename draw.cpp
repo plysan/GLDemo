@@ -169,6 +169,7 @@ int main( void )
     GLuint sun_worldspace_uniform_id = glGetUniformLocation( programID, "sun_ws" );
     GLuint vertex_offset_uniform_id = glGetUniformLocation(programID, "vertex_offset_ws");
     GLuint scatter_height_uniform_id = glGetUniformLocation(programID, "scatter_height");
+    GLuint render_target_uniform_id = glGetUniformLocation(programID, "render_target");
     glUseProgram(programID);
 
     setPosCoord(20.0f, -156.0f, 0.7f);
@@ -330,14 +331,15 @@ int main( void )
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
         glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
-        // clamp height withn atmosphere boundary temporarily
-        glUniform1f(scatter_height_uniform_id, glm::clamp((glm::length(viewPos+using_vertex_offset)-localcons::earth_radius)/(localcons::atmosphere_top_radius-localcons::earth_radius), 0.0f, 1.0f));
+        glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-localcons::earth_radius)/(localcons::atmosphere_top_radius-localcons::earth_radius));
 
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
+        glUniform1i(render_target_uniform_id, 0);
         glDrawElements(GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>(elemant_index_terrain_length_rendering*4));
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
+        glUniform1i(render_target_uniform_id, 1);
         glDrawElements(GL_TRIANGLE_STRIP, elemant_index_terrain_length_rendering, GL_UNSIGNED_INT, (void*)0);
 
         // Swap buffers

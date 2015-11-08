@@ -9,14 +9,26 @@ out vec3 vertex_normal_cs;
 out vec3 vertex_origin_dir_cs;
 out vec3 vertex_sun_dir_cs;
 out vec2 uv;
-out vec3 scatter_angles;
-out float vertex_distance;
+out vec4 scatter_params;
+out vec4 scatter_params_terrain;
 
 uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
 uniform vec3 sun_ws;
 uniform vec3 vertex_offset_ws;
+uniform float scatter_height;
+uniform int render_target;
+
+float atmosphere_radius_square = 647.1*647.1;
+float earth_radius_square = 637.1*637.1;
+
+vec3 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs){
+    float scatter_view_angle = acos(dot(up_n_cs, origin_vertex_dir_n_cs))/3.1415927*7.0/16.0+0.03125;
+    float scatter_sun_angle_vertical = acos(dot(up_n_cs, sun_n_cs))/3.1415927*7.0/16.0+0.03125;
+    float scatter_sun_angle_horizontal = acos(dot(cross(up_n_cs, origin_vertex_dir_n_cs), cross(up_n_cs, sun_n_cs)))/3.1415927*7.0/16.0+0.03125;
+    return vec3(scatter_sun_angle_horizontal, scatter_sun_angle_vertical, scatter_view_angle);
+}
 
 void main(){
 
@@ -26,7 +38,6 @@ void main(){
 
     vec3 vertex_pos_cs = ( V * M * vec4(vertex_pos_ms,1)).xyz;
     vertex_origin_dir_cs = vec3(0,0,0) - vertex_pos_cs;
-    vertex_distance = length(vertex_pos_cs);
 
     vec3 sun_cs = ( V * vec4(sun_ws,1)).xyz;
     vertex_sun_dir_cs = sun_cs + vertex_origin_dir_cs;
@@ -34,13 +45,37 @@ void main(){
     vertex_normal_cs = ( V * M * vec4(vertex_normal_ms,0)).xyz; // Only correct if ModelMatrix does not scale the model ! Use its inverse transpose if not.
     uv = vertex_uv_ms;
 
-    vec3 up_n_cs = normalize((V * M * vec4(vertex_ws + vertex_offset_ws,0)).xyz);
+    vec3 up_n_cs;
+    float viewer_height;
     vec3 origin_vertex_dir_n_cs = -normalize(vertex_origin_dir_cs);
     vec3 sun_n_cs = normalize(sun_cs);
-    float scatter_view_angle = acos(dot(up_n_cs, origin_vertex_dir_n_cs))/3.1415927*7.0/16.0+0.03125;
-    float scatter_sun_angle_vertical = acos(dot(up_n_cs, sun_n_cs))/3.1415927*7.0/16.0+0.03125;
-    float scatter_sun_angle_horizontal = acos(dot(cross(up_n_cs, origin_vertex_dir_n_cs), cross(up_n_cs, sun_n_cs)))/3.1415927*7.0/16.0+0.03125;
-    scatter_angles = vec3(scatter_sun_angle_horizontal, scatter_sun_angle_vertical, scatter_view_angle);
+
+    vec3 sphereCenter_pos_cs = (V * vec4(-vertex_offset_ws,1)).xyz;
+    vec3 sphereCenter_vertex_cs = vertex_pos_cs - sphereCenter_pos_cs;
+    float sphereCenter_vertex_length = length(sphereCenter_vertex_cs);
+    vec3 sphereCenter_vertex_normal_cs = normalize(sphereCenter_vertex_cs);
+    vec3 vertex_pos_normal_cs = normalize(vertex_pos_cs);
+    if (scatter_height > 1.0) {
+        viewer_height = 1.0;
+        float viewer_vertex_sphereCenter_cos = dot(normalize(-sphereCenter_vertex_cs), -normalize(vertex_pos_cs));
+        if (render_target == 0) {
+            float vertex_sphereCenter_intersec_cos = cos(3.1415927 - 2 * acos(viewer_vertex_sphereCenter_cos));
+            float camera_offset = length(vertex_pos_cs) - sqrt(2 * atmosphere_radius_square * (1 - vertex_sphereCenter_intersec_cos));
+            up_n_cs = normalize(vertex_pos_normal_cs * camera_offset - sphereCenter_pos_cs);
+        } else if (render_target == 1) {
+            float camera_offset = 637.1*viewer_vertex_sphereCenter_cos + sqrt(pow(637.1*viewer_vertex_sphereCenter_cos, 2) - earth_radius_square + atmosphere_radius_square);
+            up_n_cs = normalize(vertex_pos_cs - vertex_pos_normal_cs * camera_offset - sphereCenter_pos_cs);
+        }
+    } else {
+        viewer_height = scatter_height;
+        up_n_cs = normalize(-sphereCenter_pos_cs);
+    }
+    scatter_params = vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height);
+    if (render_target == 1) {
+        up_n_cs = sphereCenter_vertex_normal_cs;
+        viewer_height = clamp((sphereCenter_vertex_length - 637.1)/10.0, 0, 1); // ???
+        scatter_params_terrain = vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height);
+    }
 
 }
 
