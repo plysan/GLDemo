@@ -216,7 +216,7 @@ float calculateColorLambda(float lambda, float height, float view_angle, float s
     float integral_intensity = 0.0f;
     glm::vec3 view_pos = calcFPosFromCoord(90.0f, 0.0f) + glm::vec3(0.0f, height, 0.0f);
     glm::vec3 integrating_dir_unit = glm::normalize(calcFPosFromCoord(90.0f-view_angle, 0.0f)) * intensity_integral_unit;
-    glm::vec3 integrant_intensity_pos = view_pos;
+    glm::vec3 integrant_intensity_pos = view_pos + integrating_dir_unit;
     glm::vec3 sun_dir_normal = glm::normalize(calcFPosFromCoord(90.0f-sun_angle_vertical, sun_angle_horizontal));
     float integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
     while(integrant_intensity_pos_height < localcons::atmosphere_top_radius
