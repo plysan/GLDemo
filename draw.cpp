@@ -122,6 +122,9 @@ void unmapBuffers() {
 
 int main( void )
 {
+    glm::detail::uint32* g_scatter_texture_array_data = new glm::detail::uint32[4096];
+    fillScatterTexture(g_scatter_texture_array_data, 8);
+
     // Initialise GLFW
     if( !glfwInit() )
     {
@@ -195,7 +198,6 @@ int main( void )
     delete[] g_terrain_texture_array_data;
     g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*terrain_texture_size*terrain_texture_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
 
-    glm::detail::uint32* g_scatter_texture_array_data = new glm::detail::uint32[4096];
     int scatter_texture_unit_id = 1;
     glActiveTexture(GL_TEXTURE0 + scatter_texture_unit_id);
     GLuint scatter_texture_id;
@@ -203,7 +205,6 @@ int main( void )
     glBindTexture(GL_TEXTURE_3D, scatter_texture_id);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    fillScatterTexture(g_scatter_texture_array_data, 8);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 16, 16, 16, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_scatter_texture_array_data);
     delete[] g_scatter_texture_array_data;
