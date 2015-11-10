@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 #include "vars.hpp"
 #include "tools.hpp"
+#include "quardtreeTerrain.hpp"
 
 int g_circular_count = 0;
 int g_radius_count = 0;
