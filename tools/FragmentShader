@@ -1,5 +1,3 @@
-#version 330 core
-
 in vec3 vertex_ws;
 in vec3 vertex_normal_cs;
 in vec3 vertex_origin_dir_cs;
