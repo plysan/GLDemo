@@ -331,7 +331,7 @@ int main( void )
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
         glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
-        glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-localcons::earth_radius)/(localcons::atmosphere_top_radius-localcons::earth_radius));
+        glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-earth_radius)/(atmosphere_top_radius-earth_radius));
 
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);

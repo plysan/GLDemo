@@ -17,27 +17,27 @@ using namespace std;
 double PI = 3.1415926535;
 
 glm::vec3 calcFPosFromCoord(float lat, float lng) {
-    lat = lat/180*localcons::pi;
-    lng = lng/180*localcons::pi;
+    lat = lat/180*pi;
+    lng = lng/180*pi;
     return glm::vec3(
-            localcons::earth_radius * cos(lat) * cos(lng),
-            localcons::earth_radius * sin(lat),
-            -localcons::earth_radius * cos(lat) * sin(lng)
+            earth_radius * cos(lat) * cos(lng),
+            earth_radius * sin(lat),
+            -earth_radius * cos(lat) * sin(lng)
             );
 }
 
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
     float radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
-    float lat = atan(pos.y/radius_xz)/localcons::pi*180.0f;
+    float lat = atan(pos.y/radius_xz)/pi*180.0f;
     float lng = -atan(pos.z/pos.x);
     if (pos.x < 0.0f) {
         if (lng < 0.0f) {
-            lng += localcons::pi;
+            lng += pi;
         } else {
-            lng -= localcons::pi;
+            lng -= pi;
         }
     }
-    lng = lng/localcons::pi*180.0f;
+    lng = lng/pi*180.0f;
     return glm::vec2(lat, lng);
 }
 

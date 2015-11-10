@@ -74,9 +74,9 @@ int getTerrainTextureLength() {
 
 glm::dvec3 calcMDTerrainPosFromCoord(double lat, double lng) {
     return glm::dvec3(
-        (double)localcons::earth_radius * std::cos(lat) * std::cos(lng) - vertex_offset.x,
-        (double)localcons::earth_radius * std::sin(lat) - vertex_offset.y,
-        (double)-localcons::earth_radius * std::cos(lat) * std::sin(lng) - vertex_offset.z
+        (double)earth_radius * std::cos(lat) * std::cos(lng) - vertex_offset.x,
+        (double)earth_radius * std::sin(lat) - vertex_offset.y,
+        (double)-earth_radius * std::cos(lat) * std::sin(lng) - vertex_offset.z
     );
 }
 
@@ -124,7 +124,7 @@ void elevationOffset(glm::vec3 *result, double elevation_factor) {
     result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
 }
 
-float elevation_divisor = localcons::earth_radius * 10000.0f;
+float elevation_divisor = earth_radius * 10000.0f;
 
 void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
     if (nodeIndex >= maxNodes) {
@@ -132,8 +132,8 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         return;
     }
     int baseIndex = nodeIndex * dinmension * dinmension;
-    glm::dvec2 bl_coord_arc = glm::dvec2((double)bl_coord.x/180*localcons::pi, (double)bl_coord.y/180*localcons::pi);
-    glm::dvec2 tr_coord_arc = glm::dvec2((double)tr_coord.x/180*localcons::pi, (double)tr_coord.y/180*localcons::pi);
+    glm::dvec2 bl_coord_arc = glm::dvec2((double)bl_coord.x/180*pi, (double)bl_coord.y/180*pi);
+    glm::dvec2 tr_coord_arc = glm::dvec2((double)tr_coord.x/180*pi, (double)tr_coord.y/180*pi);
     glm::dvec3 bl_pos = calcMDTerrainPosFromCoord(bl_coord_arc.x, bl_coord_arc.y);
     glm::dvec3 br_pos = calcMDTerrainPosFromCoord(bl_coord_arc.x, tr_coord_arc.y);
     glm::dvec3 tl_pos = calcMDTerrainPosFromCoord(tr_coord_arc.x, bl_coord_arc.y);

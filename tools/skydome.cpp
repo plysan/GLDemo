@@ -25,9 +25,9 @@ void updateSkydomeConf(int circular_count, int radius_count) {
 
 glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_origin, float lng_origin) {
     glm::vec3 pos = glm::vec3(
-        (double)localcons::atmosphere_top_radius * std::cos(lat_offset) * std::cos(lng_offset),
-        (double)localcons::atmosphere_top_radius * std::sin(lat_offset),
-        (double)-localcons::atmosphere_top_radius * std::cos(lat_offset) * std::sin(lng_offset)
+        (double)atmosphere_top_radius * std::cos(lat_offset) * std::cos(lng_offset),
+        (double)atmosphere_top_radius * std::sin(lat_offset),
+        (double)-atmosphere_top_radius * std::cos(lat_offset) * std::sin(lng_offset)
     );
     pos = glm::rotate(pos, 90.0f-lat_origin, glm::vec3(0.0f, 0.0f, -1.0f));
     pos = glm::rotate(pos, lng_origin, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -38,12 +38,12 @@ glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_or
 void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_index, int* element_index_offset, glm::vec2* vertex_uv, glm::vec2 view_coord, int circular_count, float radius_range, int radius_count) {
     int vertex_offset_init = *vertex_offset;
     int pointer = vertex_offset_init;
-    float circle_interval = 2*localcons::pi/circular_count;
+    float circle_interval = 2*pi/circular_count;
     float radius_interval = radius_range/radius_count;
     glm::vec2 zero_color_uv = glm::vec2(0.99f, 0.99f);
     for (int i=0; i<radius_count; i++) {
         for (int j=0; j<circular_count; j++) {
-            vertex[pointer] = calcMDSkyPosFromCoord(localcons::pi/2 - radius_interval*i, circle_interval*j, view_coord.x, view_coord.y);
+            vertex[pointer] = calcMDSkyPosFromCoord(pi/2 - radius_interval*i, circle_interval*j, view_coord.x, view_coord.y);
             vertex_uv[pointer++] = zero_color_uv;
         }
     }
@@ -179,9 +179,9 @@ float intensity_integral_precision_maintain_coefficient = 0.03f;
 float integral_ciexyz_clamp_coefficient = 1.0f/91.0f;
 
 float height_coefficient(float lambda, glm::vec3 height_pos) {
-    float height = glm::length(height_pos)-localcons::earth_radius;
+    float height = glm::length(height_pos)-earth_radius;
     if(height<0.0f)height = 0.0f;
-    return pow(localcons::euler, -height/height_0_rayleigh);
+    return pow(euler, -height/height_0_rayleigh);
 }
 
 float view_to_scatter_attenuation_integrating_cache = 0.0f;
@@ -194,8 +194,8 @@ float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 s
     glm::vec3 sun_dir_unit = sun_dir_normal * attenuation_integral_unit;
     glm::vec3 scatter_to_sun_integrant_pos = scatter_pos + sun_dir_unit;
     float scatter_to_sun_integrant_pos_height = glm::length(scatter_to_sun_integrant_pos);
-    while(scatter_to_sun_integrant_pos_height < localcons::atmosphere_top_radius){
-        if(scatter_to_sun_integrant_pos_height < localcons::atmosphere_bottom_radius){
+    while(scatter_to_sun_integrant_pos_height < atmosphere_top_radius){
+        if(scatter_to_sun_integrant_pos_height < atmosphere_bottom_radius){
             return 0.0f;
         }
         integral_attenuation += height_coefficient(lambda, scatter_to_sun_integrant_pos);
@@ -207,7 +207,7 @@ float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 s
      * intensity of one light beam from the sun to the viewer with one-time scatter inside atmosphere.
      * intensity = air refraction factor * optical depth * Rayleigh phase function / light's wave length^4 * air molecular density
      */
-    return pow(localcons::euler, -integral_attenuation * attenuation_integral_unit * intensity_integral_precision_maintain_coefficient / pow(lambda, 4))
+    return pow(euler, -integral_attenuation * attenuation_integral_unit * intensity_integral_precision_maintain_coefficient / pow(lambda, 4))
             * (1 + pow(scatter_angle_cos, 2))/pow(lambda, 4) * height_coefficient(lambda, scatter_pos);
 }
 
@@ -219,8 +219,8 @@ float calculateColorLambda(float lambda, float height, float view_angle, float s
     glm::vec3 integrant_intensity_pos = view_pos + integrating_dir_unit;
     glm::vec3 sun_dir_normal = glm::normalize(calcFPosFromCoord(90.0f-sun_angle_vertical, sun_angle_horizontal));
     float integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
-    while(integrant_intensity_pos_height < localcons::atmosphere_top_radius
-            && integrant_intensity_pos_height > localcons::atmosphere_bottom_radius){
+    while(integrant_intensity_pos_height < atmosphere_top_radius
+            && integrant_intensity_pos_height > atmosphere_bottom_radius){
         integral_intensity += integrantOneScatterIntensity(lambda, view_pos, integrant_intensity_pos, sun_dir_normal, integrating_dir_unit);
         integrant_intensity_pos += integrating_dir_unit;
         integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
@@ -272,7 +272,7 @@ glm::detail::uint32 calculateColor(float height, float view_angle, float sun_ang
 
 // dimension = n^3 where n is int
 void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int dimension) {
-    float atmosphere_top_height = localcons::atmosphere_top_radius - localcons::earth_radius - 0.1f;
+    float atmosphere_top_height = atmosphere_top_radius - earth_radius - 0.1f;
     int n = (int)pow(dimension, 1.0f/3.0f);
     //printf("n: %d\n", n);
     int dimension_3D_exp_2 = dimension*n * dimension*n;
