@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
+#include <math.h>
 #include <thread>
 #include <chrono>
 #include "tools/tools.hpp"
@@ -122,7 +123,8 @@ void unmapBuffers() {
 
 int main( void )
 {
-    glm::detail::uint32* g_scatter_texture_array_data = new glm::detail::uint32[4096];
+    int scatter_texture_size = scatter_texture_3d_size*scatter_texture_4thd_in_3d_size;
+    glm::detail::uint32* g_scatter_texture_array_data = new glm::detail::uint32[(int)pow(scatter_texture_size, 3)];
     fillScatterTexture(g_scatter_texture_array_data, scatter_texture_3d_size, scatter_texture_4thd_in_3d_size);
 
     // Initialise GLFW
@@ -207,7 +209,7 @@ int main( void )
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, 16, 16, 16, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_scatter_texture_array_data);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, scatter_texture_size, scatter_texture_size, scatter_texture_size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_scatter_texture_array_data);
     delete[] g_scatter_texture_array_data;
     GLuint scatter_texure_uniform_id  = glGetUniformLocation(programID, "scatter_texture_sampler");
     glUniform1i(scatter_texure_uniform_id, scatter_texture_unit_id);
