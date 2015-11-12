@@ -123,7 +123,7 @@ void unmapBuffers() {
 int main( void )
 {
     glm::detail::uint32* g_scatter_texture_array_data = new glm::detail::uint32[4096];
-    fillScatterTexture(g_scatter_texture_array_data, 8);
+    fillScatterTexture(g_scatter_texture_array_data, scatter_texture_3d_size, scatter_texture_4thd_in_3d_size);
 
     // Initialise GLFW
     if( !glfwInit() )

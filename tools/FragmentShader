@@ -13,20 +13,23 @@ uniform sampler2D terrain_texture_sampler;
 uniform sampler3D scatter_texture_sampler;
 uniform int render_target;
 
+int scatter_texture_4thd_size_sub_1 = int(pow(float(scatter_texture_4thd_in_3d_size), 3)) - 1;
+int scatter_texture_4thd_in_3d_size_square = scatter_texture_4thd_in_3d_size * scatter_texture_4thd_in_3d_size;
+
 vec4 texture4D(vec4 scatter_params)
 {
-    int height_unormalize = int(scatter_params.w * 7);
-    float height_middle_offset = scatter_params.w * 7 - height_unormalize;
-    int xy_remainder = height_unormalize % 4;
-    float z = float(height_unormalize / 4) / 2;
-    float y = float(xy_remainder / 2) / 2;
-    float x = float(xy_remainder % 2) / 2;
+    int height_unormalize = int(scatter_params.w * scatter_texture_4thd_size_sub_1);
+    float height_middle_offset = scatter_params.w * scatter_texture_4thd_size_sub_1 - height_unormalize;
+    int xy_remainder = height_unormalize % scatter_texture_4thd_in_3d_size_square;
+    float z = float(height_unormalize / scatter_texture_4thd_in_3d_size_square) / scatter_texture_4thd_in_3d_size;
+    float y = float(xy_remainder / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
+    float x = float(xy_remainder % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
     vec4 color_0 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z+z));
     height_unormalize++;
-    xy_remainder = height_unormalize % 4;
-    z = float(height_unormalize / 4) / 2;
-    y = float(xy_remainder / 2) / 2;
-    x = float(xy_remainder % 2) / 2;
+    xy_remainder = height_unormalize % scatter_texture_4thd_in_3d_size_square;
+    z = float(height_unormalize / scatter_texture_4thd_in_3d_size_square) / scatter_texture_4thd_in_3d_size;
+    y = float(xy_remainder / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
+    x = float(xy_remainder % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
     vec4 color_1 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z+z));
     return color_0 * (1.0 - height_middle_offset) + color_1 * height_middle_offset;
 }

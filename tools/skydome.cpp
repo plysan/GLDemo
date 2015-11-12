@@ -271,31 +271,29 @@ glm::detail::uint32 calculateColor(float height, float view_angle, float sun_ang
     return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | 255&0x000000ff;
 }
 
-// dimension = n^3 where n is int
-void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int dimension) {
+void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int scatter_texture_3d_size, int scatter_texture_4thd_in_3d_size) {
     float atmosphere_top_height = atmosphere_top_radius - earth_radius - 0.1f;
-    int n = (int)pow(dimension, 1.0f/3.0f);
-    //printf("n: %d\n", n);
-    int dimension_3D_exp_2 = dimension*n * dimension*n;
-    int dimension_3D = dimension*n;
+    int texture_size_exp_2 = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size * scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
+    int texture_size = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
+    int scatter_texture_4thd_size = pow(scatter_texture_4thd_in_3d_size, 3);
     // height: 0 -> atmosphere_top_height
-    for (int i=0; i<dimension; i++) {
+    for (int i=0; i<scatter_texture_4thd_size; i++) {
         //if(i > 2)continue;
-        int xy = i%(n*n);
-        int x = xy%n * dimension;
-        int y = xy/n * dimension;
-        int z = i/(n*n) * dimension;
-        float height = atmosphere_top_height * (float)i/(dimension-1);
+        int xy = i % (scatter_texture_4thd_in_3d_size * scatter_texture_4thd_in_3d_size);
+        int x = xy%scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
+        int y = xy/scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
+        int z = i/(scatter_texture_4thd_in_3d_size*scatter_texture_4thd_in_3d_size) * scatter_texture_3d_size;
+        float height = atmosphere_top_height * (float)i/(scatter_texture_4thd_size-1);
         // view angle: 0 -> 180
-        for(int j=0; j<dimension; j++) {
-            float view_angle = 180.0f * (float)j/(dimension-1);
+        for(int j=0; j<scatter_texture_3d_size; j++) {
+            float view_angle = 180.0f * (float)j/(scatter_texture_3d_size-1);
             // sun angle vertical: 0 -> 180
-            for(int k=0; k<dimension; k++) {
-                float sun_angle_vertical = 180.0f * (float)k/(dimension-1);
+            for(int k=0; k<scatter_texture_3d_size; k++) {
+                float sun_angle_vertical = 180.0f * (float)k/(scatter_texture_3d_size-1);
                 // sun angle horizontal: 0 -> 180
-                for(int l=0; l<dimension; l++) {
-                    float sun_angle_horizontal = 180.0f * (float)l/(dimension-1);
-                    scatter_texture_array_data[(j+z)*dimension_3D_exp_2 + (k+y)*dimension_3D + l+x] = calculateColor(height, view_angle, sun_angle_vertical, sun_angle_horizontal);
+                for(int l=0; l<scatter_texture_3d_size; l++) {
+                    float sun_angle_horizontal = 180.0f * (float)l/(scatter_texture_3d_size-1);
+                    scatter_texture_array_data[(j+z)*texture_size_exp_2 + (k+y)*texture_size + l+x] = calculateColor(height, view_angle, sun_angle_vertical, sun_angle_horizontal);
                 }
                 printf("\n");
             }

@@ -21,11 +21,13 @@ uniform int render_target;
 float atmosphere_radius_square = atmosphere_top_radius * atmosphere_top_radius;
 float earth_radius_square = earth_radius * earth_radius;
 float atmosphere_thickness = atmosphere_top_radius - earth_radius;
+float scatter_texture_scale_factor = float(scatter_texture_3d_size - 1) / (scatter_texture_3d_size * scatter_texture_4thd_in_3d_size);
+float scatter_texture_offset = 1.0 / (scatter_texture_3d_size * scatter_texture_4thd_in_3d_size * 2);
 
 vec3 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs){
-    float scatter_view_angle = acos(dot(up_n_cs, origin_vertex_dir_n_cs))/pi*7.0/16.0+0.03125;
-    float scatter_sun_angle_vertical = acos(dot(up_n_cs, sun_n_cs))/pi*7.0/16.0+0.03125;
-    float scatter_sun_angle_horizontal = acos(dot(cross(up_n_cs, origin_vertex_dir_n_cs), cross(up_n_cs, sun_n_cs)))/pi*7.0/16.0+0.03125;
+    float scatter_view_angle = acos(dot(up_n_cs, origin_vertex_dir_n_cs)) / pi * scatter_texture_scale_factor + scatter_texture_offset;
+    float scatter_sun_angle_vertical = acos(dot(up_n_cs, sun_n_cs)) / pi * scatter_texture_scale_factor + scatter_texture_offset;
+    float scatter_sun_angle_horizontal = acos(dot(cross(up_n_cs, origin_vertex_dir_n_cs), cross(up_n_cs, sun_n_cs))) / pi * scatter_texture_scale_factor + scatter_texture_offset;
     return vec3(scatter_sun_angle_horizontal, scatter_sun_angle_vertical, scatter_view_angle);
 }
 
