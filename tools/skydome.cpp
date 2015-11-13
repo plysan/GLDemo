@@ -196,7 +196,7 @@ float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 s
     glm::vec3 scatter_to_sun_integrant_pos = scatter_pos + sun_dir_unit;
     float scatter_to_sun_integrant_pos_height = glm::length(scatter_to_sun_integrant_pos);
     while(scatter_to_sun_integrant_pos_height < atmosphere_top_radius){
-        if(scatter_to_sun_integrant_pos_height < atmosphere_bottom_radius){
+        if(scatter_to_sun_integrant_pos_height < earth_radius){
             return 0.0f;
         }
         integral_attenuation += height_coefficient(lambda, scatter_to_sun_integrant_pos);
@@ -221,7 +221,7 @@ float calculateColorLambda(float lambda, float height, float view_angle, float s
     glm::vec3 sun_dir_normal = glm::normalize(calcFPosFromCoord(90.0f-sun_angle_vertical, sun_angle_horizontal));
     float integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
     while(integrant_intensity_pos_height < atmosphere_top_radius
-            && integrant_intensity_pos_height > atmosphere_bottom_radius){
+            && integrant_intensity_pos_height > earth_radius){
         integral_intensity += integrantOneScatterIntensity(lambda, view_pos, integrant_intensity_pos, sun_dir_normal, integrating_dir_unit);
         integrant_intensity_pos += integrating_dir_unit;
         integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
