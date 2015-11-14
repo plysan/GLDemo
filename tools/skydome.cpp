@@ -179,7 +179,7 @@ float height_0_rayleigh = 0.8f;
 float intensity_integral_precision_maintain_coefficient = 0.03f;
 float integral_ciexyz_clamp_coefficient = 1.0f/91.0f;
 
-float height_coefficient(float lambda, glm::vec3 height_pos) {
+float height_coefficient(glm::vec3 height_pos) {
     float height = glm::length(height_pos)-earth_radius;
     if(height<0.0f)height = 0.0f;
     return pow(euler, -height/height_0_rayleigh);
@@ -190,7 +190,7 @@ float view_to_scatter_attenuation_integrating_cache = 0.0f;
 int count = 0;
 
 float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 scatter_pos, glm::vec3 sun_dir_normal, glm::vec3 view_dir) {
-    view_to_scatter_attenuation_integrating_cache += height_coefficient(lambda, scatter_pos);
+    view_to_scatter_attenuation_integrating_cache += height_coefficient(scatter_pos);
     float integral_attenuation = view_to_scatter_attenuation_integrating_cache;
     glm::vec3 sun_dir_unit = sun_dir_normal * attenuation_integral_unit;
     glm::vec3 scatter_to_sun_integrant_pos = scatter_pos + sun_dir_unit;
@@ -199,7 +199,7 @@ float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 s
         if(scatter_to_sun_integrant_pos_height < earth_radius){
             return 0.0f;
         }
-        integral_attenuation += height_coefficient(lambda, scatter_to_sun_integrant_pos);
+        integral_attenuation += height_coefficient(scatter_to_sun_integrant_pos);
         scatter_to_sun_integrant_pos += sun_dir_unit;
         scatter_to_sun_integrant_pos_height = glm::length(scatter_to_sun_integrant_pos);
     }
@@ -209,7 +209,7 @@ float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 s
      * intensity = air refraction factor * optical depth * Rayleigh phase function / light's wave length^4 * air molecular density
      */
     return pow(euler, -integral_attenuation * attenuation_integral_unit * intensity_integral_precision_maintain_coefficient / pow(lambda, 4))
-            * (1 + pow(scatter_angle_cos, 2))/pow(lambda, 4) * height_coefficient(lambda, scatter_pos);
+            * (1 + pow(scatter_angle_cos, 2))/pow(lambda, 4) * height_coefficient(scatter_pos);
 }
 
 float calculateColorLambda(float lambda, float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
