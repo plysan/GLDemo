@@ -177,7 +177,7 @@ float attenuation_integral_unit = 0.4f;
 float height_0_rayleigh = 0.8f;
 // decrease/increase to be more/less blue
 float intensity_integral_precision_maintain_coefficient = 0.03f;
-float integral_ciexyz_clamp_coefficient = 1.0f/91.0f;
+float color_ciexyz_clamp_coefficient = 1.0f/91.0f;
 
 float height_coefficient(glm::vec3 height_pos) {
     float height = glm::length(height_pos)-earth_radius;
@@ -186,10 +186,10 @@ float height_coefficient(glm::vec3 height_pos) {
 }
 
 float view_to_scatter_attenuation_integrating_cache = 0.0f;
+float integral_attenuation[1024];
+glm::vec3 scatter_poses[1024];
 
-int count = 0;
-
-float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 scatter_pos, glm::vec3 sun_dir_normal, glm::vec3 view_dir) {
+float integralAttenuation(glm::vec3 scatter_pos, glm::vec3 sun_dir_normal) {
     view_to_scatter_attenuation_integrating_cache += height_coefficient(scatter_pos);
     float integral_attenuation = view_to_scatter_attenuation_integrating_cache;
     glm::vec3 sun_dir_unit = sun_dir_normal * attenuation_integral_unit;
@@ -197,38 +197,49 @@ float integrantOneScatterIntensity(float lambda, glm::vec3 view_pos, glm::vec3 s
     float scatter_to_sun_integrant_pos_height = glm::length(scatter_to_sun_integrant_pos);
     while(scatter_to_sun_integrant_pos_height < atmosphere_top_radius){
         if(scatter_to_sun_integrant_pos_height < earth_radius){
-            return 0.0f;
+            return 999999999.9f;// for sunlight that is blocked by earth, return a big value to approach infinite optical depth, ie, zero intensity
         }
         integral_attenuation += height_coefficient(scatter_to_sun_integrant_pos);
         scatter_to_sun_integrant_pos += sun_dir_unit;
         scatter_to_sun_integrant_pos_height = glm::length(scatter_to_sun_integrant_pos);
     }
-    float scatter_angle_cos = glm::dot(view_dir, sun_dir_normal);
-    /*
-     * intensity of one light beam from the sun to the viewer with one-time scatter inside atmosphere.
-     * intensity = air refraction factor * optical depth * Rayleigh phase function / light's wave length^4 * air molecular density
-     */
-    return pow(euler, -integral_attenuation * attenuation_integral_unit * intensity_integral_precision_maintain_coefficient / pow(lambda, 4))
-            * (1 + pow(scatter_angle_cos, 2))/pow(lambda, 4) * height_coefficient(scatter_pos);
+    return integral_attenuation;
 }
 
-float calculateColorLambda(float lambda, float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
+glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
     view_to_scatter_attenuation_integrating_cache = 0.0f;
-    float integral_intensity = 0.0f;
     glm::vec3 view_pos = calcFPosFromCoord(90.0f, 0.0f) + glm::vec3(0.0f, height, 0.0f);
-    glm::vec3 integrating_dir_unit = glm::normalize(calcFPosFromCoord(90.0f-view_angle, 0.0f)) * intensity_integral_unit;
-    glm::vec3 integrant_intensity_pos = view_pos + integrating_dir_unit;
+    glm::vec3 view_dir_integral_unit = glm::normalize(calcFPosFromCoord(90.0f-view_angle, 0.0f)) * intensity_integral_unit;
+    glm::vec3 scatter_pos = view_pos + view_dir_integral_unit;
     glm::vec3 sun_dir_normal = glm::normalize(calcFPosFromCoord(90.0f-sun_angle_vertical, sun_angle_horizontal));
-    float integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
-    while(integrant_intensity_pos_height < atmosphere_top_radius
-            && integrant_intensity_pos_height > earth_radius){
-        integral_intensity += integrantOneScatterIntensity(lambda, view_pos, integrant_intensity_pos, sun_dir_normal, integrating_dir_unit);
-        integrant_intensity_pos += integrating_dir_unit;
-        integrant_intensity_pos_height = glm::length(integrant_intensity_pos);
+    float scatter_pos_height = glm::length(scatter_pos);
+    int integral_attenuation_index = 0;
+    while(scatter_pos_height < atmosphere_top_radius
+            && scatter_pos_height > earth_radius){
+        integral_attenuation[integral_attenuation_index] = integralAttenuation(scatter_pos, sun_dir_normal);
+        scatter_poses[integral_attenuation_index++] = scatter_pos;
+        scatter_pos += view_dir_integral_unit;
+        scatter_pos_height = glm::length(scatter_pos);
     }
-    // air refraction formula referenced from http://refractiveindex.info
-    float air_refraction = 0.05792105f/(238.0185f-pow(lambda, -2)) + 0.00167917f/(57.362f-pow(lambda, -2)) + 1.0f;
-    return integral_intensity * (pow(pow(air_refraction, 2)-1, 2) * 1000000.0f) * intensity_integral_unit;
+    float scatter_angle_cos = glm::dot(view_dir_integral_unit, sun_dir_normal);
+
+    glm::vec3 color_CIEXYZ = glm::vec3(0.0f, 0.0f, 0.0f);
+    for (int i=0; i<cie_matrix_length; i++) {
+        float lambda = cie_matrix[i][0];
+        float integral_intensity_lambda = 0.0f;
+        for(int j=0; j<integral_attenuation_index; j++) {
+            integral_intensity_lambda += pow(euler, -integral_attenuation[j] * attenuation_integral_unit * intensity_integral_precision_maintain_coefficient / pow(lambda, 4)) * height_coefficient(scatter_poses[j]);
+        }
+        if(lambda==0.4f && height==0.0f && view_angle==90.0f && sun_angle_vertical == 90.0f && sun_angle_horizontal == 0.0f)printf("hehe: %f\n", integral_intensity_lambda);
+        // air refraction formula referenced from http://refractiveindex.info
+        float air_refraction = 0.05792105f/(238.0185f-pow(lambda, -2)) + 0.00167917f/(57.362f-pow(lambda, -2)) + 1.0f;
+        integral_intensity_lambda *= (pow(pow(air_refraction, 2)-1, 2) * 1000000.0f)/pow(lambda, 4);
+        color_CIEXYZ.x += integral_intensity_lambda * cie_matrix[i][1];
+        color_CIEXYZ.y += integral_intensity_lambda * cie_matrix[i][2];
+        color_CIEXYZ.z += integral_intensity_lambda * cie_matrix[i][3];
+    }
+
+    return color_CIEXYZ * (float)(intensity_integral_unit * (1 + pow(scatter_angle_cos, 2)));
 }
 
 // adjust the power value according to your monitor
@@ -242,18 +253,13 @@ float gamma_correction(float linear) {
 float max_intensity = 0.0f;
 
 glm::detail::uint32 calculateColor(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
-    glm::vec3 integral_ciexyz = glm::vec3(0.0f);
-    for (int i=0; i<cie_matrix_length; i++) {
-        integral_ciexyz.x += calculateColorLambda(cie_matrix[i][0], height, view_angle, sun_angle_vertical, sun_angle_horizontal) * cie_matrix[i][1];
-        integral_ciexyz.y += calculateColorLambda(cie_matrix[i][0], height, view_angle, sun_angle_vertical, sun_angle_horizontal) * cie_matrix[i][2];
-        integral_ciexyz.z += calculateColorLambda(cie_matrix[i][0], height, view_angle, sun_angle_vertical, sun_angle_horizontal) * cie_matrix[i][3];
-    }
+    glm::vec3 color_ciexyz = calculateColorCIEXYZ(height, view_angle, sun_angle_vertical, sun_angle_horizontal);
 
-    if(integral_ciexyz.x > max_intensity)max_intensity = integral_ciexyz.x;
-    if(integral_ciexyz.y > max_intensity)max_intensity = integral_ciexyz.y;
-    if(integral_ciexyz.z > max_intensity)max_intensity = integral_ciexyz.z;
+    if(color_ciexyz.x > max_intensity)max_intensity = color_ciexyz.x;
+    if(color_ciexyz.y > max_intensity)max_intensity = color_ciexyz.y;
+    if(color_ciexyz.z > max_intensity)max_intensity = color_ciexyz.z;
 
-    glm::vec3 color_srgb_linear = ciexyz2srgb_matrix * (integral_ciexyz * integral_ciexyz_clamp_coefficient);
+    glm::vec3 color_srgb_linear = ciexyz2srgb_matrix * (color_ciexyz * color_ciexyz_clamp_coefficient);
     glm::vec3 color_srgb = glm::vec3(gamma_correction(color_srgb_linear.x), gamma_correction(color_srgb_linear.y), gamma_correction(color_srgb_linear.z));
     int red = (int)(color_srgb.x * 255);
     int green = (int)(color_srgb.y * 255);
