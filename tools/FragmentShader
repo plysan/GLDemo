@@ -3,36 +3,13 @@ in vec3 vertex_normal_cs;
 in vec3 vertex_origin_dir_cs;
 in vec3 vertex_sun_dir_cs;
 in vec2 uv;
-in vec4 scatter_params;
-in vec4 scatter_params_terrain;
+in vec4 scatter_rgba;
 
 out vec3 color;
 
 uniform vec3 sun_ws;
 uniform sampler2D terrain_texture_sampler;
-uniform sampler3D scatter_texture_sampler;
 uniform int render_target;
-
-int scatter_texture_4thd_size_sub_1 = int(pow(float(scatter_texture_4thd_in_3d_size), 3)) - 1;
-int scatter_texture_4thd_in_3d_size_square = scatter_texture_4thd_in_3d_size * scatter_texture_4thd_in_3d_size;
-
-vec4 texture4D(vec4 scatter_params)
-{
-    int height_unormalize = int(scatter_params.w * scatter_texture_4thd_size_sub_1);
-    float height_middle_offset = scatter_params.w * scatter_texture_4thd_size_sub_1 - height_unormalize;
-    int xy_remainder = height_unormalize % scatter_texture_4thd_in_3d_size_square;
-    float z = float(height_unormalize / scatter_texture_4thd_in_3d_size_square) / scatter_texture_4thd_in_3d_size;
-    float y = float(xy_remainder / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
-    float x = float(xy_remainder % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
-    vec4 color_0 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z+z));
-    height_unormalize++;
-    xy_remainder = height_unormalize % scatter_texture_4thd_in_3d_size_square;
-    z = float(height_unormalize / scatter_texture_4thd_in_3d_size_square) / scatter_texture_4thd_in_3d_size;
-    y = float(xy_remainder / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
-    x = float(xy_remainder % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
-    vec4 color_1 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z+z));
-    return color_0 * (1.0 - height_middle_offset) + color_1 * height_middle_offset;
-}
 
 void main()
 {
@@ -43,10 +20,6 @@ void main()
     vec3 terrain_diffuse = vec3(0.01, 0.01, 0.01) + terrain_rgba.rgb;
     vec3 terrain_ambient = vec3(0.4, 0.4, 0.4) * terrain_diffuse;
     vec3 terrain_specular = vec3(1.0-terrain_rgba.a, 1.0-terrain_rgba.a, 1.0-terrain_rgba.a);
-    vec4 scatter_rgba = texture4D(scatter_params);
-    if(render_target == 1){
-        scatter_rgba -= texture4D(scatter_params_terrain);
-    }
 
     float sun_vertex_distance = length( sun_ws - vertex_ws );
 

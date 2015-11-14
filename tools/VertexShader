@@ -7,8 +7,7 @@ out vec3 vertex_normal_cs;
 out vec3 vertex_origin_dir_cs;
 out vec3 vertex_sun_dir_cs;
 out vec2 uv;
-out vec4 scatter_params;
-out vec4 scatter_params_terrain;
+out vec4 scatter_rgba;
 
 uniform mat4 MVP;
 uniform mat4 M;
@@ -17,18 +16,39 @@ uniform vec3 sun_ws;
 uniform vec3 vertex_offset_ws;
 uniform float scatter_height;
 uniform int render_target;
+uniform sampler3D scatter_texture_sampler;
 
 float atmosphere_radius_square = atmosphere_top_radius * atmosphere_top_radius;
 float earth_radius_square = earth_radius * earth_radius;
 float atmosphere_thickness = atmosphere_top_radius - earth_radius;
 float scatter_texture_scale_factor = float(scatter_texture_3d_size - 1) / (scatter_texture_3d_size * scatter_texture_4thd_in_3d_size);
 float scatter_texture_offset = 1.0 / (scatter_texture_3d_size * scatter_texture_4thd_in_3d_size * 2);
+int scatter_texture_4thd_size_sub_1 = int(pow(float(scatter_texture_4thd_in_3d_size), 3)) - 1;
+int scatter_texture_4thd_in_3d_size_square = scatter_texture_4thd_in_3d_size * scatter_texture_4thd_in_3d_size;
 
 vec3 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs){
     float scatter_view_angle = acos(dot(up_n_cs, origin_vertex_dir_n_cs)) / pi * scatter_texture_scale_factor + scatter_texture_offset;
     float scatter_sun_angle_vertical = acos(dot(up_n_cs, sun_n_cs)) / pi * scatter_texture_scale_factor + scatter_texture_offset;
     float scatter_sun_angle_horizontal = acos(dot(cross(up_n_cs, origin_vertex_dir_n_cs), cross(up_n_cs, sun_n_cs))) / pi * scatter_texture_scale_factor + scatter_texture_offset;
     return vec3(scatter_sun_angle_horizontal, scatter_sun_angle_vertical, scatter_view_angle);
+}
+
+vec4 texture4D(vec4 scatter_params)
+{
+    int height_unormalize = int(scatter_params.w * scatter_texture_4thd_size_sub_1);
+    float height_middle_offset = scatter_params.w * scatter_texture_4thd_size_sub_1 - height_unormalize;
+    int xy_remainder = height_unormalize % scatter_texture_4thd_in_3d_size_square;
+    float z = float(height_unormalize / scatter_texture_4thd_in_3d_size_square) / scatter_texture_4thd_in_3d_size;
+    float y = float(xy_remainder / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
+    float x = float(xy_remainder % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
+    vec4 color_0 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z+z));
+    height_unormalize++;
+    xy_remainder = height_unormalize % scatter_texture_4thd_in_3d_size_square;
+    z = float(height_unormalize / scatter_texture_4thd_in_3d_size_square) / scatter_texture_4thd_in_3d_size;
+    y = float(xy_remainder / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
+    x = float(xy_remainder % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
+    vec4 color_1 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z+z));
+    return color_0 * (1.0 - height_middle_offset) + color_1 * height_middle_offset;
 }
 
 void main(){
@@ -71,11 +91,11 @@ void main(){
         viewer_height = scatter_height;
         up_n_cs = normalize(-sphereCenter_pos_cs);
     }
-    scatter_params = vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height);
+    scatter_rgba = texture4D(vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height));
     if (render_target == 1) {
         up_n_cs = sphereCenter_vertex_normal_cs;
         viewer_height = clamp((sphereCenter_vertex_length - earth_radius)/atmosphere_thickness, 0, 1);
-        scatter_params_terrain = vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height);
+        scatter_rgba -= texture4D(vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height));
     }
 
 }
