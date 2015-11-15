@@ -378,7 +378,7 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed
         int tr_coord_y_int = (int)tr_coord.y;
         int scale_y = tr_coord_x_int - bl_coord_x_int;
         int scale_x = tr_coord_y_int - bl_coord_y_int;
-        bool exist_any_img = false;
+        int missing_images_count = 0;
         for (int i=bl_coord_y_int; i<tr_coord_y_int; i++) {
             for (int j=bl_coord_x_int; j<tr_coord_x_int; j++) {
                 int base_index_unit =
@@ -386,13 +386,13 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed
                         texture_unit_index % texture_unit_dinmension * texture_unit_size +
                         (int)((j - bl_coord_x_int) * ((float)texture_unit_size/scale_y)) * texture_unit_size * texture_unit_dinmension +
                         (int)((i - bl_coord_y_int) * ((float)texture_unit_size/scale_x));
-                if (readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit)) {
-                    exist_any_img = true;
+                if (!readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit)) {
+                    missing_images_count++;
+                    if(missing_images_count>scale_y*scale_x/2) {
+                        return glm::vec2(-10.0f, -10.0f);
+                    }
                 }
             }
-        }
-        if (!exist_any_img) {
-            return glm::vec2(-10.0f, -10.0f);
         }
     } else {
         int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
