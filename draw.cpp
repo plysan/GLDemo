@@ -71,8 +71,8 @@ void updateData(bool loop)
         new_node = new Node;
         cleanupNode(&node_to_del);
         createQuardTree(
-            glm::vec2(17.0f, -160.0f),
-            glm::vec2(24.0f, -153.0f),
+            glm::vec2(-20.0f, -180.0f),
+            glm::vec2(60.0f, -100.0f),
             &quardtree_length_update,
             g_vertex_buffer_data[renderingBufferIndex],
             g_mapped_vertex_uv_data,
@@ -87,7 +87,7 @@ void updateData(bool loop)
             g_vertex_buffer_data[renderingBufferIndex], &quardtree_length_update,
             g_mapped_vertex_element_data, &elemant_index_length_update,
             g_mapped_vertex_uv_data,
-            glm::vec2(20.0f, -156.0f), 6, 1, 10);
+            glm::vec2(20.0f, -156.0f), 64, 1.5, 64);
         elemant_index_sky_length_update = elemant_index_length_update - elemant_index_terrain_length_update;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d\n", quardtree_length_update, elemant_index_length_update, nodeIndex);
@@ -175,7 +175,7 @@ int main( void )
     glUseProgram(programID);
 
     setPosCoord(20.0f, -156.0f, 0.7f);
-    updateSkydomeConf(6, 10);
+    updateSkydomeConf(64, 64);
     int vertex_buffer_length = getQuardTreePosLength() + getSkydomePosLength();
     int element_buffer_length = getQuardTreeElementIndexLength() + getSkydomePosLength();
     using_vertex_offset = vertex_offset;
@@ -330,7 +330,7 @@ int main( void )
         glUniformMatrix4fv(matrixMVPID, 1, GL_FALSE, &MVP[0][0]);
         glUniformMatrix4fv(matrixMID, 1, GL_FALSE, &M[0][0]);
         glUniformMatrix4fv(matrixVID, 1, GL_FALSE, &V[0][0]);
-        glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(20.0f, -158.0f);
+        glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(0.0f, -68.0f);
         glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
         glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-earth_radius)/(atmosphere_top_radius-earth_radius));

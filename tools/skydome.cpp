@@ -172,12 +172,12 @@ float cie_matrix[][4] = {
 float ciexyz2srgb_data[9] = {3.1338561f, -0.9787684f, 0.0719453f, -1.6168667f, 1.9161415f, -0.2289914f, -0.4906146f, 0.0334540f, 1.4052427f};
 glm::mat3 ciexyz2srgb_matrix = glm::make_mat3(ciexyz2srgb_data);
 
-float intensity_integral_unit = 0.4f;
-float attenuation_integral_unit = 0.4f;
+float intensity_integral_unit = 0.9f;
+float attenuation_integral_unit = 0.9f;
 float height_0_rayleigh = 0.8f;
 // decrease/increase to be more/less blue
-float intensity_integral_precision_maintain_coefficient = 0.03f;
-float color_ciexyz_clamp_coefficient = 1.0f/91.0f;
+float intensity_integral_precision_maintain_coefficient = 0.01f;
+float color_ciexyz_clamp_coefficient = 1.0f/500.0f;
 
 float height_coefficient(glm::vec3 height_pos) {
     float height = glm::length(height_pos)-earth_radius;
@@ -245,7 +245,7 @@ glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
 // adjust the power value according to your monitor
 float gamma_correction(float linear) {
     if (linear > 0.0f) {
-        return pow(linear, (1.0f/1.2f));
+        return pow(linear, (1.0f/1.9f));
     }
     return linear;
 }

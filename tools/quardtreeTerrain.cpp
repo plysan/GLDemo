@@ -33,7 +33,7 @@ static unsigned int* result_index;
 static glm::vec3* result_normal;
 
 // dinmension must be 2^n+1 where n is int
-int dinmension = 65;
+int dinmension = 33;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
 int maxNodes = 500;
 int vertexBufferSize = dinmension*dinmension*maxNodes;
