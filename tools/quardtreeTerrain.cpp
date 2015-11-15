@@ -174,6 +174,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                     elevationOffset(&result[base_index++], elevation_factor);
                 }
             }
+            _TIFFfree(buf);
             TIFFClose(tif);
         }
     } else {
