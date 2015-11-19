@@ -242,14 +242,6 @@ glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
     return color_CIEXYZ * (float)(intensity_integral_unit * (1 + pow(scatter_angle_cos, 2)));
 }
 
-// adjust the power value according to your monitor
-float gamma_correction(float linear) {
-    if (linear > 0.0f) {
-        return pow(linear, (1.0f/1.9f));
-    }
-    return linear;
-}
-
 float max_intensity = 0.0f;
 
 glm::detail::uint32 calculateColor(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
@@ -260,10 +252,9 @@ glm::detail::uint32 calculateColor(float height, float view_angle, float sun_ang
     if(color_ciexyz.z > max_intensity)max_intensity = color_ciexyz.z;
 
     glm::vec3 color_srgb_linear = ciexyz2srgb_matrix * (color_ciexyz * color_ciexyz_clamp_coefficient);
-    glm::vec3 color_srgb = glm::vec3(gamma_correction(color_srgb_linear.x), gamma_correction(color_srgb_linear.y), gamma_correction(color_srgb_linear.z));
-    int red = (int)(color_srgb.x * 255);
-    int green = (int)(color_srgb.y * 255);
-    int blue = (int)(color_srgb.z * 255);
+    int red = (int)(color_srgb_linear.x * 255);
+    int green = (int)(color_srgb_linear.y * 255);
+    int blue = (int)(color_srgb_linear.z * 255);
 
     // clip the srgb range that out of 0~255
     if(red>255)red=255;
