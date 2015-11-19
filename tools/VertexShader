@@ -7,7 +7,7 @@ out vec3 vertex_normal_cs;
 out vec3 vertex_origin_dir_cs;
 out vec3 vertex_sun_dir_cs;
 out vec2 uv;
-out vec4 scatter_rgba;
+noperspective out vec4 scatter_rgba;
 
 uniform mat4 MVP;
 uniform mat4 M;

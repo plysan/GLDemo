@@ -3,7 +3,7 @@ in vec3 vertex_normal_cs;
 in vec3 vertex_origin_dir_cs;
 in vec3 vertex_sun_dir_cs;
 in vec2 uv;
-in vec4 scatter_rgba;
+noperspective in vec4 scatter_rgba;
 
 out vec3 color;
 
