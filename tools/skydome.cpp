@@ -244,8 +244,8 @@ glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
 
 float max_intensity = 0.0f;
 
-glm::detail::uint32 calculateColor(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
-    glm::vec3 color_ciexyz = calculateColorCIEXYZ(height, view_angle, sun_angle_vertical, sun_angle_horizontal);
+glm::detail::uint32 calculateColor(float height, float view_angle_cos, float sun_angle_vertical_cos, float sun_angle_horizontal_cos) {
+    glm::vec3 color_ciexyz = calculateColorCIEXYZ(height, acos(view_angle_cos)/pi*180.0f, acos(sun_angle_vertical_cos)/pi*180.0f, acos(sun_angle_horizontal_cos)/pi*180.0f);
 
     if(color_ciexyz.x > max_intensity)max_intensity = color_ciexyz.x;
     if(color_ciexyz.y > max_intensity)max_intensity = color_ciexyz.y;
@@ -281,16 +281,16 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         int y = xy/scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
         int z = i/(scatter_texture_4thd_in_3d_size*scatter_texture_4thd_in_3d_size) * scatter_texture_3d_size;
         float height = atmosphere_top_height * (float)i/(scatter_texture_4thd_size-1);
-        // view angle: 0 -> 180
-        for(int j=0; j<scatter_texture_3d_size; j++) {
-            float view_angle = 180.0f * (float)j/(scatter_texture_3d_size-1);
-            // sun angle vertical: 0 -> 180
-            for(int k=0; k<scatter_texture_3d_size; k++) {
-                float sun_angle_vertical = 180.0f * (float)k/(scatter_texture_3d_size-1);
-                // sun angle horizontal: 0 -> 180
-                for(int l=0; l<scatter_texture_3d_size; l++) {
-                    float sun_angle_horizontal = 180.0f * (float)l/(scatter_texture_3d_size-1);
-                    scatter_texture_array_data[(j+z)*texture_size_exp_2 + (k+y)*texture_size + l+x] = calculateColor(height, view_angle, sun_angle_vertical, sun_angle_horizontal);
+        // cos of view angle: -1 -> 1
+        for(int j=scatter_texture_3d_size-1; j>-1; j--) {
+            float view_angle_cos = 2.0f * (float)j/(scatter_texture_3d_size-1) - 1.0f;
+            // cos of sun angle vertical: -1 -> 1
+            for(int k=scatter_texture_3d_size-1; k>-1; k--) {
+                float sun_angle_vertical_cos = 2.0f * (float)k/(scatter_texture_3d_size-1) - 1.0f;
+                // cos of sun angle horizontal: -1 -> 1
+                for(int l=scatter_texture_3d_size-1; l>-1; l--) {
+                    float sun_angle_horizontal_cos = 2.0f * (float)l/(scatter_texture_3d_size-1) - 1.0f;
+                    scatter_texture_array_data[(j+z)*texture_size_exp_2 + (k+y)*texture_size + l+x] = calculateColor(height, view_angle_cos, sun_angle_vertical_cos, sun_angle_horizontal_cos);
                 }
                 printf("\n");
             }
