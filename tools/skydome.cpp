@@ -230,7 +230,6 @@ glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
         for(int j=0; j<integral_attenuation_index; j++) {
             integral_intensity_lambda += pow(euler, -integral_attenuation[j] * attenuation_integral_unit * intensity_integral_precision_maintain_coefficient / pow(lambda, 4)) * height_coefficient(scatter_poses[j]);
         }
-        if(lambda==0.4f && height==0.0f && view_angle==90.0f && sun_angle_vertical == 90.0f && sun_angle_horizontal == 0.0f)printf("hehe: %f\n", integral_intensity_lambda);
         // air refraction formula referenced from http://refractiveindex.info
         float air_refraction = 0.05792105f/(238.0185f-pow(lambda, -2)) + 0.00167917f/(57.362f-pow(lambda, -2)) + 1.0f;
         integral_intensity_lambda *= (pow(pow(air_refraction, 2)-1, 2) * 1000000.0f)/pow(lambda, 4);
