@@ -268,7 +268,7 @@ glm::detail::uint32 calculateColor(float height, float view_angle_cos, float sun
 }
 
 void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int scatter_texture_3d_size, int scatter_texture_4thd_in_3d_size) {
-    float atmosphere_top_height = atmosphere_top_radius - earth_radius - 0.1f;
+    float atmosphere_top_height = atmosphere_top_radius - earth_radius;
     int texture_size_exp_2 = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size * scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
     int texture_size = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
     int scatter_texture_4thd_size = pow(scatter_texture_4thd_in_3d_size, 3);
