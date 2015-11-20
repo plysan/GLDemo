@@ -281,13 +281,13 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         int y = xy/scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
         int z = i/(scatter_texture_4thd_in_3d_size*scatter_texture_4thd_in_3d_size) * scatter_texture_3d_size;
         float height = atmosphere_top_height * (float)i/(scatter_texture_4thd_size-1);
-        // cos of view angle: -1 -> 1
+        // cos of view angle: 1 -> -1
         for(int j=scatter_texture_3d_size-1; j>-1; j--) {
             float view_angle_cos = 2.0f * (float)j/(scatter_texture_3d_size-1) - 1.0f;
-            // cos of sun angle vertical: -1 -> 1
+            // cos of sun angle vertical: 1 -> -1
             for(int k=scatter_texture_3d_size-1; k>-1; k--) {
                 float sun_angle_vertical_cos = 2.0f * (float)k/(scatter_texture_3d_size-1) - 1.0f;
-                // cos of sun angle horizontal: -1 -> 1
+                // cos of sun angle horizontal: 1 -> -1
                 for(int l=scatter_texture_3d_size-1; l>-1; l--) {
                     float sun_angle_horizontal_cos = 2.0f * (float)l/(scatter_texture_3d_size-1) - 1.0f;
                     scatter_texture_array_data[(j+z)*texture_size_exp_2 + (k+y)*texture_size + l+x] = calculateColor(height, view_angle_cos, sun_angle_vertical_cos, sun_angle_horizontal_cos);
