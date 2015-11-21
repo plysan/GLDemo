@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 #include <glm/glm.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -269,9 +272,21 @@ glm::detail::uint32 calculateColor(float height, float view_angle_cos, float sun
 
 void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int scatter_texture_3d_size, int scatter_texture_4thd_in_3d_size) {
     float atmosphere_top_height = atmosphere_top_radius - earth_radius;
-    int texture_size_exp_2 = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size * scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
+    int texture_size_exp_2 = pow(scatter_texture_3d_size*scatter_texture_4thd_in_3d_size, 2);
+    int texture_size_exp_3 = pow(scatter_texture_3d_size*scatter_texture_4thd_in_3d_size, 3);
     int texture_size = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
     int scatter_texture_4thd_size = pow(scatter_texture_4thd_in_3d_size, 3);
+    std::stringstream scatter_file_name;
+    scatter_file_name << "scatter_texture_" << scatter_texture_3d_size << "-" << scatter_texture_4thd_in_3d_size;
+    std::ifstream scatter_file_in (scatter_file_name.str().c_str());
+    if(scatter_file_in) {
+        printf("Reading existing scatter texture: %s\n", scatter_file_name.str().c_str());
+        for(int i=0; i<texture_size_exp_3; i++) {
+            scatter_file_in >> scatter_texture_array_data[i];
+        }
+        scatter_file_in.close();
+        return;
+    }
     // height: 0 -> atmosphere_top_height
     for (int i=0; i<scatter_texture_4thd_size; i++) {
         //if(i > 2)continue;
@@ -298,4 +313,14 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         printf("-----------------------------------------^%d\n", i);
     }
     printf("max_intensity: %f\n", max_intensity);
+    printf("Saving scatter texture to: %s\n", scatter_file_name.str().c_str());
+    std::ofstream scatter_file_out (scatter_file_name.str().c_str());
+    if (!scatter_file_out.is_open()) {
+        printf("scatter texture open failed..\n");
+        return;
+    }
+    for(int i=0; i<texture_size_exp_3; i++) {
+        scatter_file_out << scatter_texture_array_data[i] << " ";
+    }
+    scatter_file_out.close();
 }
