@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -287,6 +288,7 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         scatter_file_in.close();
         return;
     }
+    clock_t before = clock();
     // height: 0 -> atmosphere_top_height
     for (int i=0; i<scatter_texture_4thd_size; i++) {
         //if(i > 2)continue;
@@ -312,7 +314,7 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         }
         printf("-----------------------------------------^%d\n", i);
     }
-    printf("max_intensity: %f\n", max_intensity);
+    printf("Scatter texture compute time: %fs\nColor max intensity: %f\n", (double)(clock() - before)/CLOCKS_PER_SEC, max_intensity);
     printf("Saving scatter texture to: %s\n", scatter_file_name.str().c_str());
     std::ofstream scatter_file_out (scatter_file_name.str().c_str());
     if (!scatter_file_out.is_open()) {
