@@ -16,7 +16,7 @@ int g_circular_count = 0;
 int g_radius_count = 0;
 
 int getSkydomePosLength() {
-   return g_circular_count * g_radius_count;
+   return (g_circular_count - 1) * (g_radius_count * 2 + 2) + 1;
 }
 
 int getSkydomeElementLength() {
