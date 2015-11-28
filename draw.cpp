@@ -87,7 +87,7 @@ void updateData(bool loop)
             g_vertex_buffer_data[renderingBufferIndex], &quardtree_length_update,
             g_mapped_vertex_element_data, &elemant_index_length_update,
             g_mapped_vertex_uv_data,
-            glm::vec2(20.0f, -156.0f), 64, 1.5, 64);
+            calcCoordFromPos(vertex_offset), 64, 1.5, 64);
         elemant_index_sky_length_update = elemant_index_length_update - elemant_index_terrain_length_update;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d\n", quardtree_length_update, elemant_index_length_update, nodeIndex);
