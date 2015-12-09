@@ -51,6 +51,7 @@ int terrain_texture_size = texture_unit_size*texture_unit_dinmension;
 static int terrain_texture_units = texture_unit_dinmension * texture_unit_dinmension - 1;
 static uint32* texture;
 static int texture_unit_index = 0;
+int lod_max = 4;
 
 int getQuardTreePosLength() {
     return maxNodes * dinmension * dinmension;
@@ -287,50 +288,114 @@ void genElementIndex() {
     }
 }
 
+bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image_coord, glm::vec2 bl_coord, glm::vec2 tr_coord) {
+    stringstream ss;
+    float coord_span = tr_coord.x - bl_coord.x;
+    float coord_span_lod = 1.0f/lod_max;
+    while(coord_span > coord_span_lod) {
+        coord_span_lod *= 2.0f;
+    }
+    glm::vec2 bl_coord_int = glm::vec2((float)(int)bl_coord.x, (float)(int)bl_coord.y);
+    if(bl_coord_int.x < 0.0f)bl_coord_int.x -= 1.0f;
+    if(bl_coord_int.y < 0.0f)bl_coord_int.y -= 1.0f;
+    *tif = NULL;
+    glm::vec2 bl_coord_image;
+    while(*tif == NULL && coord_span_lod <= 1.0f) {
+        bl_coord_image = bl_coord_int;
+        while(bl_coord_image.x>bl_coord.x || bl_coord_image.x+coord_span_lod<tr_coord.x) {
+            bl_coord_image.x += coord_span_lod;
+        }
+        while(bl_coord_image.y>bl_coord.y || bl_coord_image.y+coord_span_lod<tr_coord.y) {
+            bl_coord_image.y += coord_span_lod;
+        }
+        ss.str("");
+        if(coord_span_lod == 1.0f) {
+            ss << "/home/ply/projects/opengl/test2/data/Hawaii/"
+                    << (bl_coord_image.x<0.0f ? 's' : 'n') << glm::abs(bl_coord_image.x) << '_'
+                    << (bl_coord_image.y<0.0f ? 'w' : 'e') << glm::abs(bl_coord_image.y) << "_img.tif";;
+        } else {
+            glm::vec2 tr_coord_index = glm::vec2(bl_coord_image.x+coord_span_lod, bl_coord_image.y+coord_span_lod);
+            ss << "/home/ply/projects/opengl/test2/data/Hawaii/"
+                    << (bl_coord_image.x<0.0f ? 's' : 'n') << glm::abs(bl_coord_image.x) << '_'
+                    << (bl_coord_image.y<0.0f ? 'w' : 'e') << glm::abs(bl_coord_image.y) << '~'
+                    << (tr_coord_index.x<0.0f ? 's' : 'n') << glm::abs(tr_coord_index.x) << '_'
+                    << (tr_coord_index.y<0.0f ? 'w' : 'e') << glm::abs(tr_coord_index.y) << "_img.tif";
+        }
+        *tif = TIFFOpen(ss.str().c_str(), "r");
+        if(*tif == NULL)coord_span_lod *= 2.0f;
+    }
+    if(*tif != NULL)*image_bl_coord = bl_coord_image;
+    *span_image_coord = coord_span_lod;
+    return *tif != NULL;
+}
+
 bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
     bool created = false;
     stringstream ss;
     ss << std::setprecision(std::numeric_limits<float>::digits10+1);
     char ns = bl_coord.x<0.0f ? 's' : 'n';
     char ew = bl_coord.y<0.0f ? 'w' : 'e';
-    if (bl_coord.x < 0.0f) {
-        bl_coord.x = -bl_coord.x;
-    }
-    if (bl_coord.y < 0.0f) {
-        bl_coord.y = -bl_coord.y;
-    }
-    if (tr_coord.x - bl_coord.x < 1.0f) {
-        if (tr_coord.x < 0.0f) {
-            tr_coord.x = -tr_coord.x;
-        }
-        if (tr_coord.y < 0.0f) {
-            tr_coord.y = -tr_coord.y;
-        }
-        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord.x << '_' << ew << bl_coord.y << '~' << ns << tr_coord.x << '_' << ew << tr_coord.y << "_img.tif";
-    } else {
-        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord.x << '_' << ew << bl_coord.y << "_img.tif";
-    }
-    TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
-    if (tif != NULL) {
-        created = true;
-        uint32 image_w, image_h;
-        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
-        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
-        float scale_lat = image_h/(texture_unit_size/(float)scale_y);
-        float scale_lng = image_w/(texture_unit_size/(float)scale_x);
-        uint32* buf = (uint32*)_TIFFmalloc(image_w * sizeof(uint32));
-        for (float strip=image_h-1; strip>=0.0f; strip-=scale_lat) {
-            base_index_unit += texture_unit_size * texture_unit_dinmension;
-            TIFFReadRGBAStrip(tif, (int)strip, buf);
-            int row_index = 0;
-            for (float i=0; i<image_w; i+=scale_lng) {
-                uint32 color = buf[(int)i];
-                texture[base_index_unit + row_index] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
-                row_index++;
+    bool detailed = tr_coord.x - bl_coord.x < 1.0f;
+    TIFF *tif;
+    if (!detailed) {
+        ss << "/home/ply/projects/opengl/test2/data/Hawaii/"
+                << ns << glm::abs(bl_coord.x) << '_' << ew << glm::abs(bl_coord.y) << "_img.tif";
+        tif = TIFFOpen(ss.str().c_str(), "r");
+        if (tif != NULL) {
+            created = true;
+            uint32 image_w, image_h;
+            TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
+            TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
+            float scale_lat = image_h/(texture_unit_size/(float)scale_y);
+            float scale_lng = image_w/(texture_unit_size/(float)scale_x);
+            uint32* buf = (uint32*)_TIFFmalloc(image_w * sizeof(uint32));
+            for (float strip=image_h-1; strip>=0.0f; strip-=scale_lat) {
+                TIFFReadRGBAStrip(tif, (int)strip, buf);
+                int row_index = 0;
+                for (float i=0; i<image_w; i+=scale_lng) {
+                    uint32 color = buf[(int)i];
+                    texture[base_index_unit + row_index] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+                    row_index++;
+                }
+                base_index_unit += texture_unit_size * texture_unit_dinmension;
             }
+            _TIFFfree(buf);
+            TIFFClose(tif);
         }
-        _TIFFfree(buf);
-        TIFFClose(tif);
+    } else {
+        glm::vec2 mid_coord = (bl_coord+tr_coord)/2.0f;
+        int bl_image_lat = (int)mid_coord.x;
+        int bl_image_lng = glm::abs(((int)mid_coord.y)-1);
+        ss.str("");
+        glm::vec2 image_bl_coord;
+        float span_image_coord;
+        if(getImageFromCoords(&tif, &image_bl_coord, &span_image_coord, bl_coord, tr_coord)) {
+            uint32 image_w, image_h;
+            TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
+            TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
+            float image_usage_percent = (tr_coord.x-bl_coord.x)/span_image_coord;
+            if(image_usage_percent*image_h*1.5f > texture_unit_size || image_usage_percent*image_w*1.5f > texture_unit_size) {
+                created = true;
+                uint32* buf = (uint32*)_TIFFmalloc(image_w * sizeof(uint32));
+                float scale_lat = image_h*image_usage_percent/texture_unit_size;
+                float scale_lng = image_w*image_usage_percent/texture_unit_size;
+                float offset_lat = (span_image_coord-(bl_coord.x-image_bl_coord.x))/span_image_coord*image_h;
+                float offset_lng = (bl_coord.y-image_bl_coord.y)/span_image_coord*image_w;
+                for (int i=0; i<texture_unit_size; i++) {
+                    TIFFReadRGBAStrip(tif, (int)offset_lat, buf);
+                    offset_lat -= scale_lat;
+                    float offset = offset_lng;
+                    for (int j=0; j<texture_unit_size; j++) {
+                        uint32 color = buf[(int)offset];
+                        offset += scale_lng;
+                        texture[base_index_unit + j] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+                    }
+                    base_index_unit += texture_unit_size * texture_unit_dinmension;
+                }
+                _TIFFfree(buf);
+            }
+            TIFFClose(tif);
+        }
     }
     return created;
 }
