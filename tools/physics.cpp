@@ -38,8 +38,14 @@ glm::vec3 getResultNormalFromCoord(glm::vec2 coord, int* rIndex) {
             }
         }
     }
-    float lat_offset = target_node->lat_bl + target_node->node_size_lat - coord.x;
+    float lat_offset;
+    if(target_node->lat_bl < coord.x) {
+        lat_offset = target_node->lat_bl + target_node->node_size_lat - coord.x;
+    } else {
+        lat_offset = target_node->node_size_lat*0.99999f; // make it not reach the bondary
+    }
     float lng_offset = coord.y - target_node->lng_bl;
+    if(lng_offset == target_node->node_size_lng)lng_offset *= 0.99999f; // make it not reach the bondary
     float normal_index_row_offset = (lat_offset/target_node->node_size_lat * (float)(dinmension - 1));
     float normal_index_column_offset = (lng_offset/target_node->node_size_lng * (float)(dinmension - 1));
     int normal_index_offset = (int)normal_index_row_offset * dinmension + (int)normal_index_column_offset;
