@@ -21,9 +21,10 @@ uniform sampler3D scatter_texture_sampler;
 float atmosphere_radius_square = atmosphere_top_radius * atmosphere_top_radius;
 float earth_radius_square = earth_radius * earth_radius;
 float atmosphere_thickness = atmosphere_top_radius - earth_radius;
-float scatter_texture_scale_factor = float(scatter_texture_3d_size - 1) / (scatter_texture_3d_size * scatter_texture_4thd_in_3d_size);
-float view_angle_factor = float(scatter_texture_3d_size - 1) / scatter_texture_3d_size;
-float scatter_texture_offset = 1.0 / (scatter_texture_3d_size * scatter_texture_4thd_in_3d_size * 2);
+float scatter_texture_size = scatter_texture_3d_size * scatter_texture_4thd_in_3d_size;
+float scatter_texture_scale_factor = float(scatter_texture_3d_size - 1) / (scatter_texture_size);
+float view_angle_factor = float(scatter_texture_size - 1) / scatter_texture_size;
+float scatter_texture_offset = 1.0 / (scatter_texture_size * 2);
 int scatter_texture_4thd_size_sub_1 = int(pow(float(scatter_texture_4thd_in_3d_size), 2)) - 1;
 
 vec3 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs){
