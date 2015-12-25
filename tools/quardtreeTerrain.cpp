@@ -25,6 +25,7 @@ using namespace std;
 
 extern glm::vec3 viewPos;
 glm::vec3 vertex_offset;
+glm::vec3 vertex_offset_diff;
 
 Node* node = NULL;
 glm::vec3* result;
@@ -497,8 +498,9 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
         return;
     }
-    float view_node_mid_distance = glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - vertex_offset - viewPos);
-    float view_height_sealevel = glm::abs(glm::length(vertex_offset + viewPos) - earth_radius) + 0.01f;
+    glm::vec3 viewer_pos = vertex_offset - vertex_offset_diff + viewPos;
+    float view_node_mid_distance = glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - viewer_pos);
+    float view_height_sealevel = glm::abs(glm::length(viewer_pos) - earth_radius) + 0.01f;
     float view_node_mid_distance_horizontal = sqrt(pow(view_node_mid_distance, 2) - pow(view_height_sealevel, 2));
     float node_view_size_arc = atan((view_node_mid_distance_horizontal+node_size/2)/view_height_sealevel)
             - atan((view_node_mid_distance_horizontal-node_size/2)/view_height_sealevel);

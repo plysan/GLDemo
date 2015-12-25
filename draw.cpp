@@ -17,8 +17,6 @@
 #include "tools/vars.hpp"
 
 extern glm::vec3 viewPos;
-// to store viewPos upon quardtree update
-glm::vec3 viewPos_cached;
 // used to store vertex offset of the updating buffer and update to physics in the next buffer update
 glm::vec3 vertex_offset_snap;
 
@@ -65,8 +63,8 @@ void updateData(bool loop)
         int quardtree_length_update = 0;
         int elemant_index_length_update = 0;
         clock_t before = clock();
-        viewPos_cached = viewPos;
-        vertex_offset += viewPos_cached;
+        vertex_offset_diff = viewPos;
+        vertex_offset += vertex_offset_diff;
         vertex_offset_snap = vertex_offset;
         new_node = new Node;
         cleanupNode(&node_to_del);
@@ -286,7 +284,7 @@ int main( void )
             //update vars
             elemant_index_terrain_length_rendering = elemant_index_terrain_length_update;
             elemant_index_sky_length_rendering = elemant_index_sky_length_update;
-            viewPos = viewPos - viewPos_cached;
+            viewPos = viewPos - vertex_offset_diff;
             using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
             using_vertex_offset = vertex_offset_snap;
             node_to_del = node;

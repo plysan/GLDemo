@@ -6,6 +6,7 @@ extern int nodeIndex;
 extern int vertexBufferSize;
 extern int ele_index_size;
 extern glm::vec3 vertex_offset;
+extern glm::vec3 vertex_offset_diff;
 
 int getQuardTreePosLength();
 int getQuardTreeUVLength();
