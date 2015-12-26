@@ -433,6 +433,13 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     }
 }
 
+glm::vec2 getNewUv() {
+    float delta = 1.0f/(float)texture_unit_dinmension;
+    glm::vec2 new_texture_unit_uv_base = glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
+    texture_unit_index++;
+    return new_texture_unit_uv_base;
+}
+
 glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
     if (texture_unit_index >= terrain_texture_units) {
         texture_unit_index--;
@@ -461,10 +468,7 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed
             return glm::vec2(-10.0f, -10.0f);
         }
     }
-    float delta = 1.0f/(float)texture_unit_dinmension;
-    glm::vec2 new_texture_unit_uv_base = glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
-    texture_unit_index++;
-    return new_texture_unit_uv_base;
+    return getNewUv();
 }
 
 void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node) {
@@ -554,9 +558,28 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
     result_index = result_index_ret;
     result_normal = result_normal_ret;
     texture = texture_array;
-    readGlobalImageToTexture(bl_coord, tr_coord);
-    texture_unit_index++;
-    selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension), 0, new_node);
+    float delta = 1.0f/(float)texture_unit_dinmension;
+    glm::vec2 delta_coord = glm::vec2(delta, delta);
+    if(tr_coord.y > bl_coord.y) {
+        readGlobalImageToTexture(bl_coord, tr_coord);
+        texture_unit_index++;
+        selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), delta_coord, 0, new_node);
+    } else {
+        (*new_node)->lat_mid = 90.0f;
+        (*new_node)->lng_mid = 0.0f;
+        (*new_node)->bl = new Node;
+        (*new_node)->tl = NULL;
+        (*new_node)->br = new Node;
+        (*new_node)->tr = NULL;
+        glm::vec2 tr_coord_mid = glm::vec2(tr_coord.x, 180.0f);
+        glm::vec2 bl_coord_mid = glm::vec2(bl_coord.x, -180.0f);
+        readGlobalImageToTexture(bl_coord, tr_coord_mid);
+        glm::vec2 uv0 = getNewUv();
+        selectNode(bl_coord, tr_coord_mid, uv0, uv0+delta_coord, 0, &((*new_node)->br));
+        readGlobalImageToTexture(bl_coord_mid, tr_coord);
+        glm::vec2 uv1 = getNewUv();
+        selectNode(bl_coord_mid, tr_coord, uv1, uv1+delta_coord, 0, &((*new_node)->bl));
+    }
     genElementIndex();
     *index = nodeIndex * dinmension * dinmension;
     *ele_index = nodeIndex * ele_index_node_size;
