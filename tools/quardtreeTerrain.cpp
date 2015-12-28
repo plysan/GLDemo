@@ -40,6 +40,8 @@ int maxNodes = 500;
 int vertexBufferSize = dinmension*dinmension*maxNodes;
 int ele_index_size = maxNodes*ele_index_node_size;
 int nodeIndex = 0;
+int vertex_index_offset = 0;
+int element_index_offset = 0;
 //TODO not static
 static float minNodeSize = 0.5f;
 static float maxNodeSize = 100.0f;
@@ -133,7 +135,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         *node = NULL;
         return;
     }
-    int baseIndex = nodeIndex * dinmension * dinmension;
+    int baseIndex = vertex_index_offset + nodeIndex * dinmension * dinmension;
     glm::dvec2 bl_coord_arc = glm::dvec2((double)bl_coord.x/180*pi, (double)bl_coord.y/180*pi);
     glm::dvec2 tr_coord_arc = glm::dvec2((double)tr_coord.x/180*pi, (double)tr_coord.y/180*pi);
     glm::dvec3 bl_pos = calcMDTerrainPosFromCoord(bl_coord_arc.x, bl_coord_arc.y);
@@ -186,7 +188,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         for (int i=(int)bl_coord.x; i<(int)tr_coord.x; i++) {
             for (int j=(int)bl_coord.y; j<(int)tr_coord.y; j++) {
                 //TODO lat/lng organization in node array ?
-                int base_index_unit = nodeIndex * dinmension * dinmension + dinmension/coords_spaned_x*(coords_spaned_x-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned_y*(j-(int)bl_coord.y);
+                int base_index_unit = vertex_index_offset + nodeIndex * dinmension * dinmension + dinmension/coords_spaned_x*(coords_spaned_x-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned_y*(j-(int)bl_coord.y);
                 int bl_coord_lat = i;
                 int bl_coord_lng = j;
                 stringstream ss;
@@ -234,8 +236,8 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
 
 void genElementIndex() {
     for (int idx=0; idx<nodeIndex; idx++) {
-        int base_ele_index = idx * ele_index_node_size;
-        int baseIndex_copy = idx * dinmension * dinmension;
+        int base_ele_index = element_index_offset + idx * ele_index_node_size;
+        int baseIndex_copy = vertex_index_offset + idx * dinmension * dinmension;
         //printf("ele: %d, idx: %d ~\n", base_ele_index, baseIndex_copy);
         result_index[base_ele_index++] = baseIndex_copy;
         for (int i=0; i<dinmension; i++) {
@@ -480,7 +482,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     (*node)->br = NULL;
     (*node)->tl = NULL;
     (*node)->tr = NULL;
-    (*node)->start_index = nodeIndex * dinmension * dinmension;
+    (*node)->start_index = vertex_index_offset + nodeIndex * dinmension * dinmension;
     (*node)->node_size_lat = tr_coord.x - bl_coord.x;
     (*node)->node_size_lng = tr_coord.y - bl_coord.y;
     glm::vec2 mid_coord;
@@ -547,11 +549,12 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array, Node** new_node) {
+void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* vertex_index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array, Node** new_node) {
     TIFFSetWarningHandler(NULL);
     TIFFSetErrorHandler(NULL);
-    nodeIndex = *index / dinmension / dinmension;
-    //TODO
+    vertex_index_offset = *vertex_index;
+    element_index_offset = *ele_index;
+    nodeIndex = 0;
     texture_unit_index = 0;
     result = result_ret;
     result_uv = result_uv_ret;
@@ -581,8 +584,8 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* index, glm::ve
         selectNode(bl_coord_mid, tr_coord, uv1, uv1+delta_coord, 0, &((*new_node)->bl));
     }
     genElementIndex();
-    *index = nodeIndex * dinmension * dinmension;
-    *ele_index = nodeIndex * ele_index_node_size;
+    *vertex_index += nodeIndex * dinmension * dinmension;
+    *ele_index += nodeIndex * ele_index_node_size;
 }
 
 void cleanupNode(Node** node) {
