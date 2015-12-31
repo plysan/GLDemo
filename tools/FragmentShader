@@ -9,10 +9,12 @@ out vec3 color;
 
 uniform vec3 sun_ws;
 uniform sampler2D terrain_texture_sampler;
+uniform sampler2D spacecube_texture_sampler;
 uniform int render_target;
 
 void main()
 {
+
     vec3 sun_color = vec3(1,1,1);
     float sun_power = 200000000.0f;
 
@@ -41,13 +43,18 @@ void main()
     float cos_origin_vertex_reflect = clamp( dot( vertex_origin_dir_normal_cs,reflect_sun_vertex_cs ), 0,1 );
 
     float factor;
-    if(render_target == 1){ // temperate means to mix terrain color with scatter color
+    if(render_target == 2){ // temperate means to mix terrain color with scatter color
         factor = scatter_rgba.g;
     } else {
         factor = 1;
     }
-    color =
-        scatter_rgba.rgb*factor + (1-factor) * (terrain_ambient +
-        terrain_diffuse * sun_color * sun_power * cos_sun_vertex_normal / (sun_vertex_distance) +
-        terrain_specular * sun_color * sun_power * pow(cos_origin_vertex_reflect,7) / (sun_vertex_distance));
+    // TODO: branch optimizations
+    if (render_target == 0) {
+        color = texture(spacecube_texture_sampler, uv).rgb;
+    } else {
+        color =
+            scatter_rgba.rgb*factor + (1-factor) * (terrain_ambient +
+            terrain_diffuse * sun_color * sun_power * cos_sun_vertex_normal / (sun_vertex_distance) +
+            terrain_specular * sun_color * sun_power * pow(cos_origin_vertex_reflect,7) / (sun_vertex_distance));
+    }
 }

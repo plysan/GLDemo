@@ -14,6 +14,7 @@
 #include "tools/quardtreeTerrain.hpp"
 #include "tools/physics.hpp"
 #include "tools/skydome.hpp"
+#include "tools/spaceCube.hpp"
 #include "tools/vars.hpp"
 
 extern glm::vec3 viewPos;
@@ -40,6 +41,8 @@ int elemant_index_terrain_length_update = 0;
 int elemant_index_terrain_length_rendering = 0;
 int elemant_index_sky_length_update = 0;
 int elemant_index_sky_length_rendering = 0;
+int vertex_static_data_length = 0;
+int element_static_data_length = 0;
 
 int frameCounter = 205;
 int renderingBufferIndex = 0;
@@ -60,8 +63,9 @@ void updateData(bool loop)
         if (!updating) {
             continue;
         }
-        int quardtree_length_update = 0;
-        int elemant_index_length_update = 0;
+        int vertex_pointer = vertex_static_data_length;
+        int element_pointer = element_static_data_length;
+        int element_pointer_old = element_pointer;
         clock_t before = clock();
         vertex_offset_diff = viewPos;
         vertex_offset += vertex_offset_diff;
@@ -71,26 +75,27 @@ void updateData(bool loop)
         createQuardTree(
             glm::vec2(-20.0f, -180.0f),
             glm::vec2(60.0f, -100.0f),
-            &quardtree_length_update,
+            &vertex_pointer,
             g_vertex_buffer_data[renderingBufferIndex],
             g_mapped_vertex_uv_data,
             g_mapped_vertex_normal_data,
-            &elemant_index_length_update,
+            &element_pointer,
             g_mapped_vertex_element_data,
             g_mapped_terrain_texture_array_data,
             &new_node
             );
-        elemant_index_terrain_length_update = elemant_index_length_update;
+        elemant_index_terrain_length_update = element_pointer - element_pointer_old;
+        element_pointer_old = element_pointer;
         createSkydome(
-            g_vertex_buffer_data[renderingBufferIndex], &quardtree_length_update,
-            g_mapped_vertex_element_data, &elemant_index_length_update,
+            g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
+            g_mapped_vertex_element_data, &element_pointer,
             g_mapped_vertex_uv_data,
             calcCoordFromPos(vertex_offset), 64, 1.5, 64);
-        elemant_index_sky_length_update = elemant_index_length_update - elemant_index_terrain_length_update;
+        elemant_index_sky_length_update = element_pointer - element_pointer_old;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
-        printf("points: %d, indices: %d, nodes:%d\n", quardtree_length_update, elemant_index_length_update, nodeIndex);
+        printf("points: %d, indices: %d, nodes:%d\n", vertex_pointer, element_pointer, nodeIndex);
 
-        std::copy(&g_vertex_buffer_data[renderingBufferIndex][0], &g_vertex_buffer_data[renderingBufferIndex][quardtree_length_update], g_mapped_vertex_buffer_data);
+        std::copy(&g_vertex_buffer_data[renderingBufferIndex][vertex_static_data_length], &g_vertex_buffer_data[renderingBufferIndex][vertex_pointer], &g_mapped_vertex_buffer_data[vertex_static_data_length]);
 
         unmapping = true;
         updating = false;
@@ -166,6 +171,7 @@ int main( void )
     GLuint matrixMVPID = glGetUniformLocation( programID, "MVP" );
     GLuint matrixMID = glGetUniformLocation( programID, "M" );
     GLuint matrixVID = glGetUniformLocation( programID, "V" );
+    GLuint matrix_notrans_VP_ID = glGetUniformLocation( programID, "notrans_VP" );
     GLuint sun_worldspace_uniform_id = glGetUniformLocation( programID, "sun_ws" );
     GLuint vertex_offset_uniform_id = glGetUniformLocation(programID, "vertex_offset_ws");
     GLuint scatter_height_uniform_id = glGetUniformLocation(programID, "scatter_height");
@@ -212,12 +218,32 @@ int main( void )
     GLuint scatter_texure_uniform_id  = glGetUniformLocation(programID, "scatter_texture_sampler");
     glUniform1i(scatter_texure_uniform_id, scatter_texture_unit_id);
 
+    glm::detail::uint32* spacecube_texture_array_data = new glm::detail::uint32[spacecube_texture_size*spacecube_texture_size];
+    fillSpacecubeTexture(spacecube_texture_array_data);
+    int spacecube_texture_unit_id = 2;
+    glActiveTexture(GL_TEXTURE0 + spacecube_texture_unit_id);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // ?
+    GLuint spacecube_texture_id;
+    glGenTextures(1, &spacecube_texture_id);
+    glBindTexture(GL_TEXTURE_2D, spacecube_texture_id);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, spacecube_texture_size, spacecube_texture_size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, spacecube_texture_array_data);
+    delete[] spacecube_texture_array_data;
+    GLuint spacecube_texure_uniform_id  = glGetUniformLocation(programID, "spacecube_texture_sampler");
+    glUniform1i(spacecube_texure_uniform_id, spacecube_texture_unit_id);
+
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
 
-    glGenBuffers(2, vertexbuffer);
     g_vertex_buffer_data = new glm::vec3*[2];
     g_vertex_buffer_data[0] = new glm::vec3[vertex_buffer_length];
     g_vertex_buffer_data[1] = new glm::vec3[vertex_buffer_length];
+    glm::vec2* g_vertex_uv_data = new glm::vec2[getQuardTreeUVLength()];
+    createSpaceCube(g_vertex_buffer_data[0], &vertex_static_data_length, g_vertex_uv_data);
+    std::copy(&g_vertex_buffer_data[0][0], &g_vertex_buffer_data[0][vertex_static_data_length], g_vertex_buffer_data[1]);
+
+    glGenBuffers(2, vertexbuffer);
     using_buffer_data = g_vertex_buffer_data[0];
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, g_vertex_buffer_data[0], GL_STREAM_DRAW);
@@ -227,7 +253,6 @@ int main( void )
     g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, uvbuffer);
-    glm::vec2* g_vertex_uv_data = new glm::vec2[getQuardTreeUVLength()];
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), g_vertex_uv_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
@@ -324,23 +349,28 @@ int main( void )
         computeMatricesFromInputs();
         glm::mat4 M = glm::mat4(1.0f);
         glm::mat4 V = getViewMatrix();
-        glm::mat4 MVP = getProjectionMatrix() * V * M;
+        glm::mat4 P = getProjectionMatrix();
+        glm::mat4 notrans_VP = P * V * glm::translate(viewPos);
+        glm::mat4 MVP = P * V * M;
         glUniformMatrix4fv(matrixMVPID, 1, GL_FALSE, &MVP[0][0]);
         glUniformMatrix4fv(matrixMID, 1, GL_FALSE, &M[0][0]);
         glUniformMatrix4fv(matrixVID, 1, GL_FALSE, &V[0][0]);
+        glUniformMatrix4fv(matrix_notrans_VP_ID, 1, GL_FALSE, &notrans_VP[0][0]);
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(0.0f, -68.0f);
         glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
         glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-earth_radius)/(atmosphere_top_radius-earth_radius));
 
         glDisable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE);
         glUniform1i(render_target_uniform_id, 0);
-        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>(elemant_index_terrain_length_rendering*4));
+        glDrawArrays(GL_TRIANGLES, 0, getSpaceCubePosLength());
+        glEnable(GL_CULL_FACE);
+        glUniform1i(render_target_uniform_id, 1);
+        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>((elemant_index_terrain_length_rendering+element_static_data_length)*4));
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
-        glUniform1i(render_target_uniform_id, 1);
-        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_terrain_length_rendering, GL_UNSIGNED_INT, (void*)0);
+        glUniform1i(render_target_uniform_id, 2);
+        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_terrain_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>(element_static_data_length*4));
 
         // Swap buffers
         glfwSwapBuffers(window);
