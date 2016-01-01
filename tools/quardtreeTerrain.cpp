@@ -36,7 +36,7 @@ static glm::vec3* result_normal;
 // dinmension must be 2^n+1 where n is int
 int dinmension = 33;
 static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
-int maxNodes = 500;
+int maxNodes = 1000;
 int vertexBufferSize = dinmension*dinmension*maxNodes;
 int ele_index_size = maxNodes*ele_index_node_size;
 int nodeIndex = 0;
@@ -47,9 +47,9 @@ static float minNodeSize = 0.5f;
 static float maxNodeSize = 100.0f;
 float one_degree_lat_length = glm::length(calcFPosFromCoord(0.0f, 0.0f) - calcFPosFromCoord(1.0f, 0.0f));
 
-static int texture_unit_size = 512;
+static int texture_unit_size = 128;
 static int texture_unit_size_dem = 3600;
-static int texture_unit_dinmension = 4;
+static int texture_unit_dinmension = 16;
 int terrain_texture_size = texture_unit_size*texture_unit_dinmension;
 static int terrain_texture_units = texture_unit_dinmension * texture_unit_dinmension - 1;
 static uint32* texture;

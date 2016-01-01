@@ -90,7 +90,7 @@ void updateData(bool loop)
             g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
             g_mapped_vertex_element_data, &element_pointer,
             g_mapped_vertex_uv_data,
-            calcCoordFromPos(vertex_offset), 64, 1.5, 64);
+            calcCoordFromPos(vertex_offset), 64, 1.5, 128);
         elemant_index_sky_length_update = element_pointer - element_pointer_old;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n", vertex_pointer, element_pointer, nodeIndex, texture_unit_index);
@@ -180,7 +180,7 @@ int main( void )
     glUseProgram(programID);
 
     setPosCoord(20.0f, -156.0f, 0.7f);
-    updateSkydomeConf(64, 64);
+    updateSkydomeConf(64, 128);
     int vertex_buffer_length = getQuardTreePosLength() + getSkydomePosLength();
     int element_buffer_length = getQuardTreeElementIndexLength() + getSkydomePosLength();
     using_vertex_offset = vertex_offset;
