@@ -307,8 +307,17 @@ glm::detail::uint32 calculateColor(float height, float view_angle_cos, float sun
     if(blue>255)blue=255;
     if(blue<0)blue=0;
 
-    printf("%3d%3d%3d|", red, green, blue);
-    return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | 255&0x000000ff;
+    int alpha = red;
+    if(green>alpha)alpha = green;
+    if(blue>alpha)alpha = blue;
+    if(alpha != 0) {
+        red = (float)red / alpha * 255;
+        green = (float)green / alpha * 255;
+        blue = (float)blue / alpha * 255;
+    }
+
+    printf("%3d%3d%3d%3d|", red, green, blue, alpha);
+    return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | alpha&0x000000ff;
 }
 
 void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int scatter_texture_3d_size, int scatter_texture_4thd_in_3d_size) {

@@ -161,6 +161,7 @@ int main( void )
 
     glfwSetCursorPos(window, windowW/2, windowH/2);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -364,9 +365,11 @@ int main( void )
         glDisable(GL_DEPTH_TEST);
         glUniform1i(render_target_uniform_id, 0);
         glDrawArrays(GL_TRIANGLES, 0, getSpaceCubePosLength());
+        glEnable(GL_BLEND);
         glEnable(GL_CULL_FACE);
         glUniform1i(render_target_uniform_id, 1);
         glDrawElements(GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>((elemant_index_terrain_length_rendering+element_static_data_length)*4));
+        glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         glUniform1i(render_target_uniform_id, 2);
