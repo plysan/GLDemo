@@ -53,7 +53,7 @@ static int texture_unit_dinmension = 4;
 int terrain_texture_size = texture_unit_size*texture_unit_dinmension;
 static int terrain_texture_units = texture_unit_dinmension * texture_unit_dinmension - 1;
 static uint32* texture;
-static int texture_unit_index = 0;
+int texture_unit_index = 0;
 int lod_max = 4;
 
 int getQuardTreePosLength() {

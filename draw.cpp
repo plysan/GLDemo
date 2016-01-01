@@ -93,7 +93,7 @@ void updateData(bool loop)
             calcCoordFromPos(vertex_offset), 64, 1.5, 64);
         elemant_index_sky_length_update = element_pointer - element_pointer_old;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
-        printf("points: %d, indices: %d, nodes:%d\n", vertex_pointer, element_pointer, nodeIndex);
+        printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n", vertex_pointer, element_pointer, nodeIndex, texture_unit_index);
 
         std::copy(&g_vertex_buffer_data[renderingBufferIndex][vertex_static_data_length], &g_vertex_buffer_data[renderingBufferIndex][vertex_pointer], &g_mapped_vertex_buffer_data[vertex_static_data_length]);
 

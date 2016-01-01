@@ -3,6 +3,7 @@ extern int dinmension;
 extern int terrain_texture_size;
 extern int maxNodes;
 extern int nodeIndex;
+extern int texture_unit_index;
 extern int vertexBufferSize;
 extern int ele_index_size;
 extern glm::vec3 vertex_offset;
