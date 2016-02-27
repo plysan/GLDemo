@@ -342,10 +342,16 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         //if(i > 2)continue;
         int x = i%scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
         int y = i/scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
-        float height = atmosphere_thickness * (float)i/(scatter_texture_4thd_size-1);
+        float height = atmosphere_thickness * pow((float)i/(scatter_texture_4thd_size-1), 2);
+        float height_horizon_angle_cos = -(sqrt(pow(earth_radius+height, 2) - pow(earth_radius, 2)) / (earth_radius+height));
         // cos of view angle: 1 -> -1
         for(int j=texture_size-1; j>-1; j--) {
             float view_angle_cos = 2.0f * (float)j/(texture_size-1) - 1.0f;
+            if(view_angle_cos > 0.0f) {
+                view_angle_cos = height_horizon_angle_cos + pow(view_angle_cos, 5)*(1-height_horizon_angle_cos);
+            } else {
+                view_angle_cos = height_horizon_angle_cos - pow(-view_angle_cos, 5)*(1+height_horizon_angle_cos);
+            }
             // cos of sun angle vertical: 1 -> -1
             for(int k=scatter_texture_3d_size-1; k>-1; k--) {
                 float sun_angle_vertical_cos = 2.0f * (float)k/(scatter_texture_3d_size-1) - 1.0f;

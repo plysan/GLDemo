@@ -28,11 +28,18 @@ float view_angle_factor = float(scatter_texture_size - 1) / scatter_texture_size
 float scatter_texture_offset = 1.0 / (scatter_texture_size * 2);
 int scatter_texture_4thd_size_sub_1 = int(pow(float(scatter_texture_4thd_in_3d_size), 2)) - 1;
 
-vec3 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs){
-    float scatter_view_angle = (dot(up_n_cs, origin_vertex_dir_n_cs)+1)/2 * view_angle_factor + scatter_texture_offset;
+vec4 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs, float height_coord_linear, float height_sealevel){
+    float view_angle_horizon_cos = -(sqrt(pow(earth_radius+height_sealevel, 2) - pow(earth_radius, 2)) / (earth_radius+height_sealevel));
+    float scatter_view_angle_cos = dot(up_n_cs, origin_vertex_dir_n_cs);
+    float scatter_view_angle_coord;
+    if (scatter_view_angle_cos > view_angle_horizon_cos) {
+        scatter_view_angle_coord = (0.5+pow((scatter_view_angle_cos-view_angle_horizon_cos)/(1-view_angle_horizon_cos), 0.2)*0.5) * view_angle_factor + scatter_texture_offset;
+    } else {
+        scatter_view_angle_coord = (0.5-pow((view_angle_horizon_cos-scatter_view_angle_cos)/(1+view_angle_horizon_cos), 0.2)*0.5) * view_angle_factor + scatter_texture_offset;
+    }
     float scatter_sun_angle_vertical = (dot(up_n_cs, sun_n_cs)+1)/2 * scatter_texture_scale_factor + scatter_texture_offset;
     float scatter_sun_angle_horizontal = (dot(cross(up_n_cs, origin_vertex_dir_n_cs), cross(up_n_cs, sun_n_cs))+1)/2 * scatter_texture_scale_factor + scatter_texture_offset;
-    return vec3(scatter_sun_angle_horizontal, scatter_sun_angle_vertical, scatter_view_angle);
+    return vec4(scatter_sun_angle_horizontal, scatter_sun_angle_vertical, scatter_view_angle_coord, pow(height_coord_linear, 0.5));
 }
 
 vec4 texture4D(vec4 scatter_params)
@@ -70,7 +77,7 @@ void main(){
     vertex_normal_cs = ( V * M * vec4(vertex_normal_ms,0)).xyz; // Only correct if ModelMatrix does not scale the model ! Use its inverse transpose if not.
 
     vec3 up_n_cs;
-    float viewer_height;
+    float height_coord_linear;
     vec3 origin_vertex_dir_n_cs = -normalize(vertex_origin_dir_cs);
     vec3 sun_n_cs = normalize(sun_cs);
 
@@ -80,7 +87,7 @@ void main(){
     vec3 sphereCenter_vertex_normal_cs = normalize(sphereCenter_vertex_cs);
     vec3 vertex_pos_normal_cs = normalize(vertex_pos_cs);
     if (scatter_height > 1.0) {
-        viewer_height = 1.0;
+        height_coord_linear = 1.0;
         float viewer_vertex_sphereCenter_cos = dot(normalize(-sphereCenter_vertex_cs), -normalize(vertex_pos_cs));
         if (render_target == 1) {
             float vertex_sphereCenter_intersec_cos = cos(pi - 2 * acos(viewer_vertex_sphereCenter_cos));
@@ -91,14 +98,17 @@ void main(){
             up_n_cs = normalize(vertex_pos_cs - vertex_pos_normal_cs * camera_offset - sphereCenter_pos_cs);
         }
     } else {
-        viewer_height = scatter_height;
+        height_coord_linear = scatter_height;
         up_n_cs = normalize(-sphereCenter_pos_cs);
     }
-    scatter_rgba = texture4D(vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height));
+    scatter_rgba = texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_coord_linear*atmosphere_thickness));
     if (render_target == 2) {
         up_n_cs = sphereCenter_vertex_normal_cs;
-        viewer_height = clamp((sphereCenter_vertex_length - earth_radius)/atmosphere_thickness, 0, 1);
-        scatter_rgba -= texture4D(vec4(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs), viewer_height));
+        float height_sealevel = clamp(sphereCenter_vertex_length - earth_radius, 0, 1);
+        height_coord_linear = height_sealevel/atmosphere_thickness;
+        // temproary mean to approach scatter intensity substraction, will be replaced by a right one in future patches
+        scatter_rgba.a -= texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_sealevel)).a;
+        scatter_rgba.a = clamp(scatter_rgba.a, 0, 1);
     }
 
 }
