@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#define GLM_SWIZZLE
 #include <glm/glm.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -183,7 +184,7 @@ float integrant_length_view_angle_dependency_denominator = 1.0f + integrant_leng
 float height_0_rayleigh = 0.8f;
 // decrease/increase to be more/less blue
 float optical_depth_coefficient = 0.01f;
-float color_ciexyz_clamp_coefficient = 1.0f/500.0f;
+float color_ciexyz_clamp_coefficient = 1.0f/507.0709534f;
 
 float integral_attenuation[1024];
 float scatter_pos_coefficients[1024];
@@ -231,7 +232,7 @@ float integralAttenuation(glm::vec3 scatter_pos, glm::vec3 sun_dir_normal, float
     return integral_attenuation;
 }
 
-glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
+glm::vec4 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
     float view_to_scatter_attenuation_integral = 0.0f;
     glm::vec3 view_pos = calcFPosFromCoord(90.0f, 0.0f) + glm::vec3(0.0f, height, 0.0f);
     glm::vec3 view_dir_normal = glm::normalize(calcFPosFromCoord(90.0f-view_angle, 0.0f));
@@ -282,42 +283,36 @@ glm::vec3 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
     }
 
     float scatter_angle_cos = glm::dot(view_dir_normal, sun_dir_normal);
-    return color_CIEXYZ * (float)(1 + pow(scatter_angle_cos, 2));
+    float view_optical_length = pow(euler, -view_to_scatter_attenuation_integral*optical_depth_coefficient/pow(red_avg_wlength, 4));
+    return glm::vec4(color_CIEXYZ * (float)(1 + pow(scatter_angle_cos, 2)), view_optical_length);
 }
 
-float max_intensity = 0.0f;
+float max_intensity_ciexyz = 0.0f;
+float min_intensity_srgb = 0.0f;
+float max_intensity_srgb = 0.0f;
 
 glm::detail::uint32 calculateColor(float height, float view_angle_cos, float sun_angle_vertical_cos, float sun_angle_horizontal_cos) {
-    glm::vec3 color_ciexyz = calculateColorCIEXYZ(height, acos(view_angle_cos)/pi*180.0f, acos(sun_angle_vertical_cos)/pi*180.0f, acos(sun_angle_horizontal_cos)/pi*180.0f);
+    glm::vec4 color_ciexyz = calculateColorCIEXYZ(height, acos(view_angle_cos)/pi*180.0f, acos(sun_angle_vertical_cos)/pi*180.0f, acos(sun_angle_horizontal_cos)/pi*180.0f);
 
-    if(color_ciexyz.x > max_intensity)max_intensity = color_ciexyz.x;
-    if(color_ciexyz.y > max_intensity)max_intensity = color_ciexyz.y;
-    if(color_ciexyz.z > max_intensity)max_intensity = color_ciexyz.z;
+    if(color_ciexyz.x > max_intensity_ciexyz)max_intensity_ciexyz = color_ciexyz.x;
+    if(color_ciexyz.y > max_intensity_ciexyz)max_intensity_ciexyz = color_ciexyz.y;
+    if(color_ciexyz.z > max_intensity_ciexyz)max_intensity_ciexyz = color_ciexyz.z;
 
-    glm::vec3 color_srgb_linear = ciexyz2srgb_matrix * (color_ciexyz * color_ciexyz_clamp_coefficient);
-    int red = (int)(color_srgb_linear.x * 255);
-    int green = (int)(color_srgb_linear.y * 255);
-    int blue = (int)(color_srgb_linear.z * 255);
+    glm::vec3 color_srgb_linear = ciexyz2srgb_matrix * (color_ciexyz.xyz() * color_ciexyz_clamp_coefficient);
+    if(color_srgb_linear.x < min_intensity_srgb)min_intensity_srgb = color_srgb_linear.x;
+    if(color_srgb_linear.y < min_intensity_srgb)min_intensity_srgb = color_srgb_linear.y;
+    if(color_srgb_linear.z < min_intensity_srgb)min_intensity_srgb = color_srgb_linear.z;
+    if(color_srgb_linear.x > max_intensity_srgb)max_intensity_srgb = color_srgb_linear.x;
+    if(color_srgb_linear.y > max_intensity_srgb)max_intensity_srgb = color_srgb_linear.y;
+    if(color_srgb_linear.z > max_intensity_srgb)max_intensity_srgb = color_srgb_linear.z;
+    color_srgb_linear = color_srgb_linear * color_srgb_coefficient + glm::vec3(color_srgb_offset);
+    int red = glm::clamp((int)(color_srgb_linear.x * 255), 0, 255);
+    int green = glm::clamp((int)(color_srgb_linear.y * 255), 0, 255);
+    int blue = glm::clamp((int)(color_srgb_linear.z * 255), 0, 255);
+    int view_optical_length_int = glm::clamp((int)(color_ciexyz.w*255), 0, 255);
 
-    // clip the srgb range that out of 0~255
-    if(red>255)red=255;
-    if(red<0)red=0;
-    if(green>255)green=255;
-    if(green<0)green=0;
-    if(blue>255)blue=255;
-    if(blue<0)blue=0;
-
-    int alpha = red;
-    if(green>alpha)alpha = green;
-    if(blue>alpha)alpha = blue;
-    if(alpha != 0) {
-        red = (float)red / alpha * 255;
-        green = (float)green / alpha * 255;
-        blue = (float)blue / alpha * 255;
-    }
-
-    printf("%3d%3d%3d%3d|", red, green, blue, alpha);
-    return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | alpha&0x000000ff;
+    printf("%3d%3d%3d%3d|", red, green, blue, view_optical_length_int);
+    return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | view_optical_length_int&0x000000ff;
 }
 
 void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int scatter_texture_3d_size, int scatter_texture_4thd_in_3d_size) {

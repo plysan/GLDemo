@@ -27,6 +27,8 @@ float scatter_texture_scale_factor = float(scatter_texture_3d_size - 1) / (scatt
 float view_angle_factor = float(scatter_texture_size - 1) / scatter_texture_size;
 float scatter_texture_offset = 1.0 / (scatter_texture_size * 2);
 int scatter_texture_4thd_size_sub_1 = int(pow(float(scatter_texture_4thd_in_3d_size), 2)) - 1;
+float green_pow_coefficient = 1 / pow(green_avg_wlength/red_avg_wlength, 4);
+float blue_pow_coefficient = 1 / pow(blue_avg_wlength/red_avg_wlength, 4);
 
 vec4 getScatterAngles(vec3 up_n_cs, vec3 origin_vertex_dir_n_cs, vec3 sun_n_cs, float height_coord_linear, float height_sealevel){
     float view_angle_horizon_cos = -(sqrt(pow(earth_radius+height_sealevel, 2) - pow(earth_radius, 2)) / (earth_radius+height_sealevel));
@@ -53,7 +55,9 @@ vec4 texture4D(vec4 scatter_params)
     y = float(height_unormalize / scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
     x = float(height_unormalize % scatter_texture_4thd_in_3d_size) / scatter_texture_4thd_in_3d_size;
     vec4 color_1 = texture(scatter_texture_sampler, vec3(scatter_params.x+x, scatter_params.y+y, scatter_params.z));
-    return color_0 * (1.0 - height_middle_offset) + color_1 * height_middle_offset;
+    vec4 result = color_0 * (1.0 - height_middle_offset) + color_1 * height_middle_offset;
+    result.rgb = (result.rgb - vec3(color_srgb_offset))/color_srgb_coefficient;
+    return result;
 }
 
 void main(){
@@ -101,14 +105,28 @@ void main(){
         height_coord_linear = scatter_height;
         up_n_cs = normalize(-sphereCenter_pos_cs);
     }
-    scatter_rgba = texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_coord_linear*atmosphere_thickness));
+    vec4 scatter_rgba_first = texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_coord_linear*atmosphere_thickness));
+    scatter_rgba = scatter_rgba_first;
+    scatter_rgba = clamp(scatter_rgba, vec4(0), vec4(1));
+    scatter_rgba.a = clamp(max(scatter_rgba.r, max(scatter_rgba.g, scatter_rgba.b)), 0, 1);
+    if (scatter_rgba.a > 0) {
+        scatter_rgba.rgb /= scatter_rgba.a;
+    }
     if (render_target == 2) {
         up_n_cs = sphereCenter_vertex_normal_cs;
         float height_sealevel = clamp(sphereCenter_vertex_length - earth_radius, 0, atmosphere_thickness);
         height_coord_linear = height_sealevel/atmosphere_thickness;
-        // temproary mean to approach scatter intensity substraction, will be replaced by a right one in future patches
-        scatter_rgba.a -= texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_sealevel)).a;
-        scatter_rgba.a = clamp(scatter_rgba.a, 0, 1);
+
+        vec4 scatter_rgba_second = texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_sealevel));
+        float first_second_optical_depth = scatter_rgba_first.a / scatter_rgba_second.a;
+        vec3 scatter_rgba_offset = vec3(scatter_rgba_second.r * first_second_optical_depth,
+                                        scatter_rgba_second.g * pow(first_second_optical_depth, green_pow_coefficient),
+                                        scatter_rgba_second.b * pow(first_second_optical_depth, blue_pow_coefficient));
+        scatter_rgba.rgb = clamp(scatter_rgba_first.rgb - scatter_rgba_offset, vec3(0), vec3(1));
+        scatter_rgba.a = clamp(max(scatter_rgba.r, max(scatter_rgba.g, scatter_rgba.b)), 0, 1);
+        if(scatter_rgba.a > 0) {
+            scatter_rgba.rgb /= scatter_rgba.a;
+        }
     }
 
 }
