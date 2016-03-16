@@ -104,7 +104,7 @@ void main(){
     scatter_rgba = texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_coord_linear*atmosphere_thickness));
     if (render_target == 2) {
         up_n_cs = sphereCenter_vertex_normal_cs;
-        float height_sealevel = clamp(sphereCenter_vertex_length - earth_radius, 0, 1);
+        float height_sealevel = clamp(sphereCenter_vertex_length - earth_radius, 0, atmosphere_thickness);
         height_coord_linear = height_sealevel/atmosphere_thickness;
         // temproary mean to approach scatter intensity substraction, will be replaced by a right one in future patches
         scatter_rgba.a -= texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_sealevel)).a;
