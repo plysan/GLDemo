@@ -108,7 +108,7 @@ void main(){
     vec4 scatter_rgba_first = texture4D(getScatterAngles(up_n_cs, origin_vertex_dir_n_cs, sun_n_cs, height_coord_linear, height_coord_linear*atmosphere_thickness));
     scatter_rgba = scatter_rgba_first;
     scatter_rgba = clamp(scatter_rgba, vec4(0), vec4(1));
-    scatter_rgba.a = clamp(max(scatter_rgba.r, max(scatter_rgba.g, scatter_rgba.b)), 0, 1);
+    scatter_rgba.a = max(scatter_rgba.r, max(scatter_rgba.g, scatter_rgba.b));
     if (scatter_rgba.a > 0) {
         scatter_rgba.rgb /= scatter_rgba.a;
     }
