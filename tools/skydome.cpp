@@ -361,7 +361,19 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         }
         printf("-----------------------------------------^%d\n", i);
     }
-    printf("Scatter texture compute time: %fs\nColor max intensity: %f\n", (double)(clock() - before)/CLOCKS_PER_SEC, max_intensity);
+    printf("Scatter texture compute time: %fs\n", (double)(clock() - before)/CLOCKS_PER_SEC);
+
+    if(glm::abs(1.0f/max_intensity_ciexyz - color_ciexyz_clamp_coefficient) > 0.000001f) {
+        printf("Suggestion: set color_ciexyz_clamp_coefficient to 1.0/%.7f, then remove and regenerate(rerun) the scatter texture(program).\n", max_intensity_ciexyz);
+    } else {
+        float suggest_color_srgb_coefficient = 1.0f/(max_intensity_srgb - min_intensity_srgb);
+        float suggest_color_srgb_offset = -min_intensity_srgb * suggest_color_srgb_coefficient;
+        if(glm::abs(suggest_color_srgb_coefficient - color_srgb_coefficient) > 0.000001f || glm::abs(suggest_color_srgb_offset - color_srgb_offset) > 0.000001f) {
+            printf("Suggestion: set color_srgb_offset to %.7f and color_srgb_coefficient to %.7f, then remove and regenerate(rerun) the scatter texture(program).\n",
+                suggest_color_srgb_offset, suggest_color_srgb_coefficient);
+        }
+    }
+
     printf("Saving scatter texture to: %s\n", scatter_file_name.str().c_str());
     std::ofstream scatter_file_out (scatter_file_name.str().c_str());
     if (!scatter_file_out.is_open()) {
