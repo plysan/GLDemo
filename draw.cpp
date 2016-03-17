@@ -6,7 +6,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
-#include <math.h>
 #include <thread>
 #include <chrono>
 #include "tools/tools.hpp"

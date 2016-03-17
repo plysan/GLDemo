@@ -7,7 +7,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <math.h>
 #include <GL/glew.h>
 #include "vars.hpp"
 #include "tools.hpp"
@@ -192,7 +191,7 @@ float atmosphere_thickness = atmosphere_top_radius - earth_radius;
 
 float getIntegrantLength(glm::vec3& integrat_dir_normal, glm::vec3& up_normal, float pos_height_sealevel) {
     float up_integrat_dir_cos = glm::dot(up_normal, integrat_dir_normal);
-    float view_angle_dependency = (glm::abs(up_integrat_dir_cos) + integrant_length_view_angle_dependency)/integrant_length_view_angle_dependency_denominator;
+    float view_angle_dependency = (abs(up_integrat_dir_cos) + integrant_length_view_angle_dependency)/integrant_length_view_angle_dependency_denominator;
     if(up_integrat_dir_cos < 0.0f) {
         return (pos_height_sealevel + integrant_length_minimal) * integrant_length_coefficient / view_angle_dependency;
     } else {
@@ -363,12 +362,12 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
     }
     printf("Scatter texture compute time: %fs\n", (double)(clock() - before)/CLOCKS_PER_SEC);
 
-    if(glm::abs(1.0f/max_intensity_ciexyz - color_ciexyz_clamp_coefficient) > 0.000001f) {
+    if(abs(1.0f/max_intensity_ciexyz - color_ciexyz_clamp_coefficient) > 0.000001f) {
         printf("Suggestion: set color_ciexyz_clamp_coefficient to 1.0/%.7f, then remove and regenerate(rerun) the scatter texture(program).\n", max_intensity_ciexyz);
     } else {
         float suggest_color_srgb_coefficient = 1.0f/(max_intensity_srgb - min_intensity_srgb);
         float suggest_color_srgb_offset = -min_intensity_srgb * suggest_color_srgb_coefficient;
-        if(glm::abs(suggest_color_srgb_coefficient - color_srgb_coefficient) > 0.000001f || glm::abs(suggest_color_srgb_offset - color_srgb_offset) > 0.000001f) {
+        if(abs(suggest_color_srgb_coefficient - color_srgb_coefficient) > 0.000001f || abs(suggest_color_srgb_offset - color_srgb_offset) > 0.000001f) {
             printf("Suggestion: set color_srgb_offset to %.7f and color_srgb_coefficient to %.7f, then remove and regenerate(rerun) the scatter texture(program).\n",
                 suggest_color_srgb_offset, suggest_color_srgb_coefficient);
         }
