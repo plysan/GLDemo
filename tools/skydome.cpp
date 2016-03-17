@@ -183,10 +183,10 @@ float integrant_length_view_angle_dependency = 0.4f;
 float integrant_length_view_angle_dependency_denominator = 1.0f + integrant_length_view_angle_dependency;
 float height_0_rayleigh = 0.8f;
 // decrease/increase to be more/less blue
-float optical_depth_coefficient = 0.01f;
+float optical_length_coefficient = 0.01f;
 float color_ciexyz_clamp_coefficient = 1.0f/507.0709534f;
 
-float integral_attenuation[1024];
+float integral_scatter_optical_length[1024];
 float scatter_pos_coefficients[1024];
 float atmosphere_thickness = atmosphere_top_radius - earth_radius;
 
@@ -200,8 +200,8 @@ float getIntegrantLength(glm::vec3& integrat_dir_normal, glm::vec3& up_normal, f
     }
 }
 
-float integralAttenuation(glm::vec3 scatter_pos, glm::vec3 sun_dir_normal, float view_to_scatter_attenuation_integral) {
-    float integral_attenuation = view_to_scatter_attenuation_integral;
+float integralOpticalLength(glm::vec3 scatter_pos, glm::vec3 sun_dir_normal, float view_to_scatter_optical_length) {
+    float integral_scatter_optical_length = view_to_scatter_optical_length;
     float integrant_length;
     glm::vec3 integrant_dir_length;
     glm::vec3 integrant_pos = scatter_pos;
@@ -222,18 +222,18 @@ float integralAttenuation(glm::vec3 scatter_pos, glm::vec3 sun_dir_normal, float
         integrant_pos_height_sealevel = integrant_pos_height - earth_radius;
         integrant_pos_height_coefficient = pow(euler, -(integrant_pos_height_sealevel)/height_0_rayleigh);
         if(integrant_pos_height > last_integrant_pos_height) {
-            integral_attenuation += last_integrant_pos_height_coefficient * integrant_length;
+            integral_scatter_optical_length += last_integrant_pos_height_coefficient * integrant_length;
         } else {
-            integral_attenuation += integrant_pos_height_coefficient * integrant_length;
+            integral_scatter_optical_length += integrant_pos_height_coefficient * integrant_length;
         }
         last_integrant_pos_height = integrant_pos_height;
         last_integrant_pos_height_coefficient = integrant_pos_height_coefficient;
     }
-    return integral_attenuation;
+    return integral_scatter_optical_length;
 }
 
 glm::vec4 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_vertical, float sun_angle_horizontal) {
-    float view_to_scatter_attenuation_integral = 0.0f;
+    float view_to_scatter_optical_length = 0.0f;
     glm::vec3 view_pos = calcFPosFromCoord(90.0f, 0.0f) + glm::vec3(0.0f, height, 0.0f);
     glm::vec3 view_dir_normal = glm::normalize(calcFPosFromCoord(90.0f-view_angle, 0.0f));
     glm::vec3 scatter_pos = view_pos;
@@ -246,7 +246,7 @@ glm::vec4 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
     float scatter_pos_height_coefficient = pow(euler, -(scatter_pos_height_sealevel)/height_0_rayleigh);
     float last_scatter_pos_height = scatter_pos_height;
     float last_scatter_pos_height_coefficient = scatter_pos_height_coefficient;
-    int integral_attenuation_index = 0;
+    int integral_scatter_optical_length_index = 0;
     while(scatter_pos_height <= atmosphere_top_radius && scatter_pos_height >= earth_radius) {
         scatter_pos_normal = glm::normalize(scatter_pos);
         integrant_length = getIntegrantLength(view_dir_normal, scatter_pos_normal, scatter_pos_height_sealevel);
@@ -259,20 +259,20 @@ glm::vec4 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
         } else {
             integrant_value = integrant_length * scatter_pos_height_coefficient;
         }
-        view_to_scatter_attenuation_integral += integrant_value;
+        view_to_scatter_optical_length += integrant_value;
         last_scatter_pos_height = scatter_pos_height;
         last_scatter_pos_height_coefficient = scatter_pos_height_coefficient;
-        integral_attenuation[integral_attenuation_index] = integralAttenuation(scatter_pos, sun_dir_normal, view_to_scatter_attenuation_integral);
-        scatter_pos_coefficients[integral_attenuation_index++] = integrant_value;
+        integral_scatter_optical_length[integral_scatter_optical_length_index] = integralOpticalLength(scatter_pos, sun_dir_normal, view_to_scatter_optical_length);
+        scatter_pos_coefficients[integral_scatter_optical_length_index++] = integrant_value;
     }
-    //if(sun_angle_vertical == 0.0f && sun_angle_horizontal == 0.0f)printf("scatters: %d, height: %f, view_angle: %f\n", integral_attenuation_index, height, view_angle);
+    //if(sun_angle_vertical == 0.0f && sun_angle_horizontal == 0.0f)printf("scatters: %d, height: %f, view_angle: %f\n", integral_scatter_optical_length_index, height, view_angle);
 
     glm::vec3 color_CIEXYZ = glm::vec3(0.0f, 0.0f, 0.0f);
     for (int i=0; i<cie_matrix_length; i++) {
         float lambda = cie_matrix[i][0];
         float integral_intensity_lambda = 0.0f;
-        for(int j=0; j<integral_attenuation_index; j++) {
-            integral_intensity_lambda += pow(euler, -integral_attenuation[j] * optical_depth_coefficient / pow(lambda, 4)) * scatter_pos_coefficients[j];
+        for(int j=0; j<integral_scatter_optical_length_index; j++) {
+            integral_intensity_lambda += pow(euler, -integral_scatter_optical_length[j] * optical_length_coefficient / pow(lambda, 4)) * scatter_pos_coefficients[j];
         }
         // air refraction formula referenced from http://refractiveindex.info
         float air_refraction = 0.05792105f/(238.0185f-pow(lambda, -2)) + 0.00167917f/(57.362f-pow(lambda, -2)) + 1.0f;
@@ -283,8 +283,8 @@ glm::vec4 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
     }
 
     float scatter_angle_cos = glm::dot(view_dir_normal, sun_dir_normal);
-    float view_optical_length = pow(euler, -view_to_scatter_attenuation_integral*optical_depth_coefficient/pow(red_avg_wlength, 4));
-    return glm::vec4(color_CIEXYZ * (float)(1 + pow(scatter_angle_cos, 2)), view_optical_length);
+    float view_path_optical_depth = pow(euler, -view_to_scatter_optical_length*optical_length_coefficient/pow(red_avg_wlength, 4));
+    return glm::vec4(color_CIEXYZ * (float)(1 + pow(scatter_angle_cos, 2)), view_path_optical_depth);
 }
 
 float max_intensity_ciexyz = 0.0f;
@@ -309,10 +309,10 @@ glm::detail::uint32 calculateColor(float height, float view_angle_cos, float sun
     int red = glm::clamp((int)(color_srgb_linear.x * 255), 0, 255);
     int green = glm::clamp((int)(color_srgb_linear.y * 255), 0, 255);
     int blue = glm::clamp((int)(color_srgb_linear.z * 255), 0, 255);
-    int view_optical_length_int = glm::clamp((int)(color_ciexyz.w*255), 0, 255);
+    int view_path_optical_depth_int = glm::clamp((int)(color_ciexyz.w*255), 0, 255);
 
-    printf("%3d%3d%3d%3d|", red, green, blue, view_optical_length_int);
-    return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | view_optical_length_int&0x000000ff;
+    printf("%3d%3d%3d%3d|", red, green, blue, view_path_optical_depth_int);
+    return red<<24&0xff000000 | green<<16&0x00ff0000 | blue<<8&0x0000ff00 | view_path_optical_depth_int&0x000000ff;
 }
 
 void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int scatter_texture_3d_size, int scatter_texture_4thd_in_3d_size) {
