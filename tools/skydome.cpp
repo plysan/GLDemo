@@ -264,7 +264,6 @@ glm::vec4 calculateColorCIEXYZ(float height, float view_angle, float sun_angle_v
         integral_scatter_optical_length[integral_scatter_optical_length_index] = integralOpticalLength(scatter_pos, sun_dir_normal, view_to_scatter_optical_length);
         scatter_pos_coefficients[integral_scatter_optical_length_index++] = integrant_value;
     }
-    //if(sun_angle_vertical == 0.0f && sun_angle_horizontal == 0.0f)printf("scatters: %d, height: %f, view_angle: %f\n", integral_scatter_optical_length_index, height, view_angle);
 
     glm::vec3 color_CIEXYZ = glm::vec3(0.0f, 0.0f, 0.0f);
     for (int i=0; i<cie_matrix_length; i++) {
@@ -333,7 +332,6 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
     clock_t before = clock();
     // height: 0 -> atmosphere_thickness
     for (int i=0; i<scatter_texture_4thd_size; i++) {
-        //if(i > 2)continue;
         int x = i%scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
         int y = i/scatter_texture_4thd_in_3d_size * scatter_texture_3d_size;
         float height = atmosphere_thickness * pow((float)i/(scatter_texture_4thd_size-1), 2);
