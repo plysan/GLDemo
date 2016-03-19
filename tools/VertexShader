@@ -93,13 +93,17 @@ void main(){
     if (scatter_height > 1.0) {
         height_coord_linear = 1.0;
         float viewer_vertex_sphereCenter_cos = dot(normalize(-sphereCenter_vertex_cs), -normalize(vertex_pos_cs));
+        float viewer_vertex_sphereCenter_acos = acos(viewer_vertex_sphereCenter_cos);
+        float vertex_pos_length = length(vertex_pos_cs);
         if (render_target == 1) {
-            float vertex_sphereCenter_intersec_cos = cos(pi - 2 * acos(viewer_vertex_sphereCenter_cos));
-            float camera_offset = length(vertex_pos_cs) - sqrt(2 * atmosphere_radius_square * (1 - vertex_sphereCenter_intersec_cos));
+            float vertex_sphereCenter_intersec_cos = cos(pi - 2 * viewer_vertex_sphereCenter_acos);
+            float camera_offset = vertex_pos_length - sqrt(2 * atmosphere_radius_square * (1 - vertex_sphereCenter_intersec_cos));
             up_n_cs = normalize(vertex_pos_normal_cs * camera_offset - sphereCenter_pos_cs);
         } else if (render_target == 2) {
-            float camera_offset = earth_radius*viewer_vertex_sphereCenter_cos + sqrt(pow(earth_radius*viewer_vertex_sphereCenter_cos, 2) - earth_radius_square + atmosphere_radius_square);
-            up_n_cs = normalize(vertex_pos_cs - vertex_pos_normal_cs * camera_offset - sphereCenter_pos_cs);
+            float vertex_atmosTopIntersect_sphereCenter_angle = asin(sphereCenter_vertex_length*sin(viewer_vertex_sphereCenter_acos)/atmosphere_top_radius);
+            float camera_offset = vertex_pos_length - sqrt(pow(sphereCenter_vertex_length, 2) + pow(atmosphere_top_radius, 2)
+                - 2*atmosphere_top_radius*sphereCenter_vertex_length*cos(pi-vertex_atmosTopIntersect_sphereCenter_angle-viewer_vertex_sphereCenter_acos));
+            up_n_cs = normalize(vertex_pos_normal_cs * camera_offset - sphereCenter_pos_cs);
         }
     } else {
         height_coord_linear = scatter_height;
