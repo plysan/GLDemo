@@ -165,8 +165,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         char ns = bl_coord.x<0.0f ? 's' : 'n';
         char ew = bl_coord.y<0.0f ? 'w' : 'e';
         stringstream ss;
-        //TODO you know it
-        ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
+        ss << "assets/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
         TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
         if (tif != NULL) {
             short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
@@ -197,7 +196,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                 if (bl_coord_lng < 0) {
                     bl_coord_lng = -bl_coord_lng;
                 }
-                ss << "/home/ply/projects/opengl/test2/data/Hawaii/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
+                ss << "assets/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
                 TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
                 if (tif != NULL) {
                     uint32 imageW, imageH;
@@ -313,12 +312,12 @@ bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image
         }
         ss.str("");
         if(coord_span_lod == 1.0f) {
-            ss << "/home/ply/projects/opengl/test2/data/Hawaii/"
+            ss << "assets/"
                     << (bl_coord_image.x<0.0f ? 's' : 'n') << glm::abs(bl_coord_image.x) << '_'
                     << (bl_coord_image.y<0.0f ? 'w' : 'e') << glm::abs(bl_coord_image.y) << "_img.tif";;
         } else {
             glm::vec2 tr_coord_index = glm::vec2(bl_coord_image.x+coord_span_lod, bl_coord_image.y+coord_span_lod);
-            ss << "/home/ply/projects/opengl/test2/data/Hawaii/"
+            ss << "assets/"
                     << (bl_coord_image.x<0.0f ? 's' : 'n') << glm::abs(bl_coord_image.x) << '_'
                     << (bl_coord_image.y<0.0f ? 'w' : 'e') << glm::abs(bl_coord_image.y) << '~'
                     << (tr_coord_index.x<0.0f ? 's' : 'n') << glm::abs(tr_coord_index.x) << '_'
@@ -341,7 +340,7 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
     bool detailed = tr_coord.x - bl_coord.x < 1.0f;
     TIFF *tif;
     if (!detailed) {
-        ss << "/home/ply/projects/opengl/test2/data/Hawaii/"
+        ss << "assets/"
                 << ns << glm::abs(bl_coord.x) << '_' << ew << glm::abs(bl_coord.y) << "_img.tif";
         tif = TIFFOpen(ss.str().c_str(), "r");
         if (tif != NULL) {
@@ -405,7 +404,7 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
 
 bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     stringstream ss;
-    ss << "/home/ply/projects/opengl/test2/data/Hawaii/def.tif";
+    ss << "assets/def_img.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
         int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension

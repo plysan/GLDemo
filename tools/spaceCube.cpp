@@ -90,7 +90,7 @@ void createSpaceCube(glm::vec3* vertex, int* vertex_offset, glm::vec2* vertex_uv
 
 void fillSpacecubeTexture(glm::detail::uint32* texture_data) {
     std::stringstream ss;
-    ss << "/home/ply/projects/opengl/test2/data/space.tif";
+    ss << "assets/space.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {
         uint32 imageW, imageH;
