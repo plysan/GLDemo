@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <sstream>
 #include <stdlib.h>
 #include <time.h>
 #include <GL/glew.h>
@@ -25,6 +26,7 @@ Node* node_to_del = NULL;
 
 GLFWwindow* window;
 short windowW = 1366, windowH = 768;
+char window_title[10] = "holly";
 
 bool updating = true;
 bool unmapping = false;
@@ -43,13 +45,25 @@ int elemant_index_sky_length_rendering = 0;
 int vertex_static_data_length = 0;
 int element_static_data_length = 0;
 
-int frameCounter = 205;
+long frame_counter = 205;
+long fps_frame_stamp = frame_counter-1;
+double fps_time_stamp = 0.0;
 int renderingBufferIndex = 0;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+void updateWindowTitle() {
+    double time_now = glfwGetTime();
+    float fps = (frame_counter - fps_frame_stamp)/(time_now - fps_time_stamp);
+    fps_frame_stamp = frame_counter;
+    fps_time_stamp = time_now;
+    std::stringstream ss;
+    ss << window_title << " [" << fps << " FPS]";
+    glfwSetWindowTitle(window, ss.str().c_str());
 }
 
 void updateData(bool loop)
@@ -62,6 +76,7 @@ void updateData(bool loop)
         if (!updating) {
             continue;
         }
+        updateWindowTitle();
         int vertex_pointer = vertex_static_data_length;
         int element_pointer = element_static_data_length;
         int element_pointer_old = element_pointer;
@@ -141,7 +156,7 @@ int main( void )
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow( windowW, windowH, "holly", NULL, NULL );
+    window = glfwCreateWindow( windowW, windowH, window_title, NULL, NULL );
     if( !window )
     {
         fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
@@ -294,7 +309,7 @@ int main( void )
 
     int update_frame_interval = 5;
     do{
-        if (frameCounter%200 == update_frame_interval && updating == false && unmapping == false) {
+        if (frame_counter%200 == update_frame_interval && updating == false && unmapping == false) {
             //use the buffers that is updated
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
@@ -316,7 +331,7 @@ int main( void )
             node = new_node;
             renderingBufferIndex = (renderingBufferIndex+1)%2;
         }
-        if (frameCounter%200 == update_frame_interval*2 && updating == false && unmapping == false) {
+        if (frame_counter%200 == update_frame_interval*2 && updating == false && unmapping == false) {
             //orphaning and mapping the buffers that is not used and to be updated
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, NULL, GL_STREAM_DRAW);
@@ -339,8 +354,8 @@ int main( void )
             g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*terrain_texture_size*terrain_texture_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             updating = true;
         }
-        frameCounter++;
-        if (unmapping && frameCounter%200 == 0) {
+        frame_counter++;
+        if (unmapping && frame_counter%200 == 0) {
             unmapBuffers();
         }
 
