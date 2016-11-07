@@ -15,7 +15,7 @@
 #include <sstream>
 #include <tiffio.h>
 #include <glm/glm.hpp>
-#include <glm/gtx/constants.hpp>
+#include <glm/gtc/constants.hpp>
 #include <GL/glew.h>
 #include "quardtreeTerrain.hpp"
 #include "vars.hpp"

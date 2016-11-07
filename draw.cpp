@@ -100,11 +100,12 @@ void updateData(bool loop)
             );
         elemant_index_terrain_length_update = element_pointer - element_pointer_old;
         element_pointer_old = element_pointer;
+        glm::vec2 view_coord = calcCoordFromPos(vertex_offset);
         createSkydome(
             g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
             g_mapped_vertex_element_data, &element_pointer,
             g_mapped_vertex_uv_data,
-            calcCoordFromPos(vertex_offset), 64, 1.5, 512);
+            &view_coord, 64, 1.5f, 512);
         elemant_index_sky_length_update = element_pointer - element_pointer_old;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
         printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n", vertex_pointer, element_pointer, nodeIndex, texture_unit_index);

@@ -3,9 +3,10 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#define GLM_SWIZZLE
+// for glm::vec.xyz()
+#define GLM_FORCE_SWIZZLE
 #include <glm/glm.hpp>
-#include <glm/gtx/rotate_vector.hpp>
+// for glm::make_mat
 #include <glm/gtc/type_ptr.hpp>
 #include <GL/glew.h>
 #include "vars.hpp"
@@ -34,13 +35,33 @@ glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_or
         (double)atmosphere_top_radius * std::sin(lat_offset),
         (double)-atmosphere_top_radius * std::cos(lat_offset) * std::sin(lng_offset)
     );
-    pos = glm::rotate(pos, 90.0f-lat_origin, glm::vec3(0.0f, 0.0f, -1.0f));
-    pos = glm::rotate(pos, lng_origin, glm::vec3(0.0f, 1.0f, 0.0f));
+    float rot_lat = -(90.0f-lat_origin)*pi/180.0f;
+    float rot_lat_cos = std::cos(rot_lat);
+    float rot_lat_sin = std::sin(rot_lat);
+    float rot_lat_data[16] = {
+        rot_lat_cos, rot_lat_sin, 0.0f, 0.0f,
+        -rot_lat_sin, rot_lat_cos, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
+    };
+    glm::mat4 rotation_mat_z = glm::make_mat4(rot_lat_data);
+    pos = (rotation_mat_z * glm::vec4(pos, 1.0f)).xyz();
+    float rot_lng = lng_origin*pi/180.0f;
+    float rot_lng_cos = std::cos(rot_lng);
+    float rot_lng_sin = std::sin(rot_lng);
+    float rot_lng_data[16] = {
+        rot_lng_cos, 0.0f, -rot_lng_sin, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        rot_lng_sin, 0.0f, rot_lng_cos, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
+    };
+    glm::mat4 rotation_mat_y = glm::make_mat4(rot_lng_data);
+    pos = (rotation_mat_y * glm::vec4(pos, 1.0f)).xyz();
     pos -= vertex_offset;
     return pos;
 }
 
-void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_index, int* element_index_offset, glm::vec2* vertex_uv, glm::vec2 view_coord, int circular_count, float radius_range, int radius_count) {
+void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_index, int* element_index_offset, glm::vec2* vertex_uv, glm::vec2* view_coord, int circular_count, float radius_range, int radius_count) {
     int vertex_offset_init = *vertex_offset;
     int pointer = vertex_offset_init;
     float circle_interval = 2*pi/circular_count;
@@ -48,7 +69,7 @@ void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_
     glm::vec2 zero_color_uv = glm::vec2(0.99f, 0.99f);
     for (int i=0; i<radius_count; i++) {
         for (int j=0; j<circular_count; j++) {
-            vertex[pointer] = calcMDSkyPosFromCoord(pi/2 - radius_interval*i, circle_interval*j, view_coord.x, view_coord.y);
+            vertex[pointer] = calcMDSkyPosFromCoord(pi/2 - radius_interval*i, circle_interval*j, view_coord->x, view_coord->y);
             vertex_uv[pointer++] = zero_color_uv;
         }
     }
