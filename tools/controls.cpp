@@ -38,7 +38,6 @@ void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
 void setPosCoord(float lat, float lng, float height){
     vertex_offset = calcFPosFromCoord(lat, lng) * (height+earth_radius)/earth_radius;
     viewObj = new Object(viewPos);
-    printf("viewPos: (%f, %f, %f)\n", viewPos.x, viewPos.y, viewPos.z);
 }
 
 void computeMatricesFromInputs(){
