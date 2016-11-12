@@ -360,6 +360,7 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
         // cos of view angle: 1 -> -1
         for(int j=texture_size-1; j>-1; j--) {
             float view_angle_cos = 2.0f * (float)j/(texture_size-1) - 1.0f;
+            printf("\ncos(view): %.2f, Height: %d\n", view_angle_cos, i);
             if(view_angle_cos > 0.0f) {
                 view_angle_cos = height_horizon_angle_cos + pow(view_angle_cos, 5)*(1-height_horizon_angle_cos);
             } else {
@@ -375,9 +376,7 @@ void fillScatterTexture(glm::detail::uint32* scatter_texture_array_data, int sca
                 }
                 printf("\n");
             }
-            printf(".....................\n");
         }
-        printf("-----------------------------------------^%d\n", i);
     }
     printf("Scatter texture compute time: %fs\n", (double)(clock() - before)/CLOCKS_PER_SEC);
 
