@@ -29,8 +29,8 @@ float horizontalAngle = 0.0f;
 float verticalAngle = 1.57f;
 float initialFoV = 45.0f;
 float speed = 0.6f;
-float mouseSpeed = 0.005f;
-float srollSpeed = 0.1f;
+float mouseSpeed = 0.06f;
+float srollSpeed = 1.0f;
 
 void sroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
     initialFoV += yOffset * srollSpeed;
