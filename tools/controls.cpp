@@ -1,7 +1,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/rotate_vector.hpp>
-#include <glm/gtc/constants.hpp>
+#include <glm/gtx/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "vars.hpp"
 #include "tools.hpp"
