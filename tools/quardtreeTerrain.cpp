@@ -233,61 +233,65 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     nodeIndex++;
 }
 
-void genElementIndex() {
-    for (int idx=0; idx<nodeIndex; idx++) {
-        int base_ele_index = element_index_offset + idx * ele_index_node_size;
-        int baseIndex_copy = vertex_index_offset + idx * dinmension * dinmension;
-        //printf("ele: %d, idx: %d ~\n", base_ele_index, baseIndex_copy);
-        result_index[base_ele_index++] = baseIndex_copy;
-        for (int i=0; i<dinmension; i++) {
-            if (i%2 == 0) {
-                int normal_index_strip = base_ele_index;
-                if (i == dinmension - 1) {
-                    // fill the last row of node with normal data
-                    normal_index_strip--;
-                    for (int i=0; i<dinmension-1; i++) {
-                        result_normal[result_index[normal_index_strip]] =
-                            glm::cross(result[result_index[normal_index_strip-2]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]]);
-                        normal_index_strip -= 2;
-                    }
-                    result_normal[result_index[normal_index_strip]] =
-                        glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]]);
-                } else {
-                    for (int j=0; j<dinmension; j++) {
-                        result_index[base_ele_index++] = baseIndex_copy;
-                        result_index[base_ele_index++] = baseIndex_copy++ + dinmension;
-                    }
-                    baseIndex_copy += (dinmension - 1);
+float calResultNormalwithRoughness(int ele_index, int offset_a, int offset_b, bool add_roughness) {
+    int result_index_p = result_index[ele_index];
+    result_normal[result_index_p] = glm::normalize(glm::cross(
+        result[result_index[ele_index+offset_a]] - result[result_index_p],
+        result[result_index[ele_index+offset_b]] - result[result_index_p]));
+    if (add_roughness) {
+        return glm::length(glm::cross(result_normal[result_index_p], result_normal[result_index_p-1]));
+    } else {
+        return 0.0f;
+    }
+}
 
-                    result_normal[result_index[normal_index_strip]] =
-                        glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+2]] - result[result_index[normal_index_strip]]);
-                    normal_index_strip++;
-                    for (int i=0; i<dinmension*2-2; i++) {
-                        if (i%2 == 0) {
-                            result_normal[result_index[normal_index_strip]] =
-                                glm::cross(result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]]);
-                            normal_index_strip++;
-                        } else {
-                            result_normal[result_index[normal_index_strip]] =
-                                glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip+1]] - result[result_index[normal_index_strip]]);
-                            normal_index_strip++;
-                        }
-                    }
-                    result_normal[result_index[normal_index_strip]] =
-                        glm::cross(result[result_index[normal_index_strip-1]] - result[result_index[normal_index_strip]], result[result_index[normal_index_strip-2]] - result[result_index[normal_index_strip]]);
+float genNodeElementNormalwithRoughness(int idx) {
+    float roughness = 0.0f;
+    int base_ele_index = element_index_offset + idx * ele_index_node_size;
+    int baseIndex_copy = vertex_index_offset + idx * dinmension * dinmension;
+    result_index[base_ele_index++] = baseIndex_copy;
+    for (int i=0; i<dinmension; i++) {
+        if (i%2 == 0) {
+            int normal_index_strip = base_ele_index;
+            if (i == dinmension - 1) {
+                // fill the last row of node with normal data
+                normal_index_strip--;
+                for (int i=0; i<dinmension-1; i++) {
+                    roughness += calResultNormalwithRoughness(normal_index_strip, -2, -1, true);
+                    normal_index_strip -= 2;
                 }
+                roughness += calResultNormalwithRoughness(normal_index_strip, -1, 1, true);
             } else {
                 for (int j=0; j<dinmension; j++) {
                     result_index[base_ele_index++] = baseIndex_copy;
-                    result_index[base_ele_index++] = baseIndex_copy-- + dinmension;
+                    result_index[base_ele_index++] = baseIndex_copy++ + dinmension;
                 }
-                baseIndex_copy += (dinmension + 1);
+                baseIndex_copy += (dinmension - 1);
+
+                // skip roughness for this one
+                calResultNormalwithRoughness(normal_index_strip, 1, 2, false);
+                normal_index_strip++;
+                for (int i=0; i<dinmension*2-2; i++) {
+                    if (i%2 == 0) {
+                        roughness += calResultNormalwithRoughness(normal_index_strip, 1, -1, true);
+                        normal_index_strip++;
+                    } else {
+                        roughness += calResultNormalwithRoughness(normal_index_strip, -1, 1, true);
+                        normal_index_strip++;
+                    }
+                }
+                roughness += calResultNormalwithRoughness(normal_index_strip, -1, -2, true);
             }
-            //printf("mid: ele: %d, idx: %d\n", base_ele_index, baseIndex_copy);
+        } else {
+            for (int j=0; j<dinmension; j++) {
+                result_index[base_ele_index++] = baseIndex_copy;
+                result_index[base_ele_index++] = baseIndex_copy-- + dinmension;
+            }
+            baseIndex_copy += (dinmension + 1);
         }
-        result_index[base_ele_index] = baseIndex_copy;
-        //printf("~ ele: %d, idx: %d\n", base_ele_index, baseIndex_copy);
     }
+    result_index[base_ele_index] = baseIndex_copy;
+    return roughness;
 }
 
 bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image_coord, glm::vec2 bl_coord, glm::vec2 tr_coord) {
@@ -499,8 +503,10 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     glm::vec3 tr_pos = calcFPosFromCoord(tr_coord.x, tr_coord.y);
     float one_degree_lng_length = glm::length(calcFPosFromCoord(mid_coord.x, 0.0f) - calcFPosFromCoord(mid_coord.x, 1.0f));
     float node_size = sqrt(pow((*node)->node_size_lat*one_degree_lat_length, 2) + pow((*node)->node_size_lng*one_degree_lng_length, 2));
+    addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
+    // leave this var for future use
+    float roughness = genNodeElementNormalwithRoughness(nodeIndex-1);
     if (node_size < minNodeSize) {
-        addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
         return;
     }
     glm::vec3 viewer_pos = vertex_offset - vertex_offset_diff + viewPos;
@@ -512,6 +518,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     if (view_node_mid_distance < node_size
             || node_view_size_arc > 0.174532925f // ~ 10 degrees
             || node_size > maxNodeSize) {
+        nodeIndex--;
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
         glm::vec2 br_coord = glm::vec2(bl_coord.x, tr_coord.y);
         glm::vec2 mt_coord = glm::vec2(tr_coord.x, mid_coord.y);
@@ -543,8 +550,6 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level, &((*node)->tr));
         (*node)->br = new Node;
         selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level, &((*node)->br));
-    } else {
-        addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
     }
 }
 
@@ -582,7 +587,6 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* vertex_index, 
         glm::vec2 uv1 = getNewUv();
         selectNode(bl_coord_mid, tr_coord, uv1, uv1+delta_coord, 0, &((*new_node)->bl));
     }
-    genElementIndex();
     *vertex_index += nodeIndex * dinmension * dinmension;
     *ele_index += nodeIndex * ele_index_node_size;
 }
