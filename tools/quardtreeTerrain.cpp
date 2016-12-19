@@ -21,8 +21,6 @@
 #include "vars.hpp"
 #include "tools.hpp"
 
-using namespace std;
-
 extern glm::vec3 viewPos;
 glm::vec3 vertex_offset;
 glm::vec3 vertex_offset_diff;
@@ -164,7 +162,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
         }
         char ns = bl_coord.x<0.0f ? 's' : 'n';
         char ew = bl_coord.y<0.0f ? 'w' : 'e';
-        stringstream ss;
+        std::stringstream ss;
         ss << "assets/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
         TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
         if (tif != NULL) {
@@ -190,7 +188,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
                 int base_index_unit = vertex_index_offset + nodeIndex * dinmension * dinmension + dinmension/coords_spaned_x*(coords_spaned_x-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned_y*(j-(int)bl_coord.y);
                 int bl_coord_lat = i;
                 int bl_coord_lng = j;
-                stringstream ss;
+                std::stringstream ss;
                 char ns = bl_coord_lat<0 ? 's' : 'n';
                 char ew = bl_coord_lng<0 ? 'w' : 'e';
                 if (bl_coord_lng < 0) {
@@ -295,7 +293,7 @@ float genNodeElementNormalwithRoughness(int idx) {
 }
 
 bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image_coord, glm::vec2 bl_coord, glm::vec2 tr_coord) {
-    stringstream ss;
+    std::stringstream ss;
     float coord_span = tr_coord.x - bl_coord.x;
     float coord_span_lod = 1.0f/lod_max;
     while(coord_span > coord_span_lod) {
@@ -337,7 +335,7 @@ bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image
 
 bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
     bool created = false;
-    stringstream ss;
+    std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<float>::digits10+1);
     char ns = bl_coord.x<0.0f ? 's' : 'n';
     char ew = bl_coord.y<0.0f ? 'w' : 'e';
@@ -407,7 +405,7 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
 }
 
 bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
-    stringstream ss;
+    std::stringstream ss;
     ss << "assets/def_img.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
     if (tif != NULL) {

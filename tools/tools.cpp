@@ -10,8 +10,6 @@
 #include "vars.hpp"
 #include "quardtreeTerrain.hpp"
 
-using namespace std;
-
 #include <GL/glew.h>
 
 glm::vec3 calcFPosFromCoord(float lat, float lng) {
@@ -41,8 +39,8 @@ glm::vec2 calcCoordFromPos(glm::vec3 pos) {
 
 // shader loading
 
-string* readShaderCode(const char* file_path) {
-    string* shader_code = new string();
+std::string* readShaderCode(const char* file_path) {
+    std::string* shader_code = new std::string();
     std::ifstream shader_stream(file_path, std::ios::in);
     if(shader_stream.is_open()){
         std::string line = "";
@@ -62,7 +60,7 @@ GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path,
     GLuint vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
 
-    string** shader_strings = new string*[2];
+    std::string** shader_strings = new std::string*[2];
     const char** source_pointes = new const char*[3];
     source_pointes[0] = "#version 330 core\n";
 
