@@ -9,3 +9,4 @@ const float color_srgb_coefficient = 0.8466838;
 const float red_avg_wlength = 0.685;
 const float green_avg_wlength = 0.5325;
 const float blue_avg_wlength = 0.4725;
+const float gravity = 0.1f;

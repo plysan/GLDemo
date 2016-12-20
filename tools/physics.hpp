@@ -1,11 +1,20 @@
+#ifndef PHYSICS_HPP
+#define PHYSICS_HPP
+#include "quardtreeTerrain.hpp"
+
 class Object {
-    public:
+  public:
     float mass;
     glm::vec3 velocity;
     float force;
     glm::vec3 position;
-    Object(glm::vec3);
-    glm::vec3 nextPos();
+    glm::vec3* using_vertex;
+    // indicates the offset of the rendering buffer
+    glm::vec3 using_vertex_offset;
+    float timeStep = 0.01f;
+
+    Object();
+    glm::vec3 nextPosOf(QTProfile* terrain);
 };
-extern glm::vec3* using_buffer_data;
-extern glm::vec3 using_vertex_offset;
+
+#endif

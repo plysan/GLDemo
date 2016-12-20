@@ -17,9 +17,10 @@
 #include "tools/spaceCube.hpp"
 #include "tools/vars.hpp"
 
-extern glm::vec3 viewPos;
 // used to store vertex offset of the updating buffer and update to physics in the next buffer update
 glm::vec3 vertex_offset_snap;
+// offset of view position since last quardtree generation
+glm::vec3 vertex_offset_diff;
 
 Node* new_node = NULL;
 Node* node_to_del = NULL;
@@ -49,6 +50,18 @@ long frame_counter = 205;
 long fps_frame_stamp = frame_counter-1;
 double fps_time_stamp = 0.0;
 int renderingBufferIndex = 0;
+
+Object* viewObj;
+
+QTProfile qt_terrain (
+    33,     // dinmension
+    1000,   // maxNodes
+    0.5f,   // minNodeSize
+    100.0f, // maxNodeSize
+    128,    // texture_unit_size
+    3600,   // texture_unit_size_dem
+    16,     // texture_unit_dinmension
+    4);     // lod_max
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -81,12 +94,12 @@ void updateData(bool loop)
         int element_pointer = element_static_data_length;
         int element_pointer_old = element_pointer;
         clock_t before = clock();
-        vertex_offset_diff = viewPos;
-        vertex_offset += vertex_offset_diff;
-        vertex_offset_snap = vertex_offset;
+        vertex_offset_diff = viewObj->position;
+        qt_terrain.vertex_offset += vertex_offset_diff;
+        vertex_offset_snap = qt_terrain.vertex_offset;
         new_node = new Node;
-        cleanupNode(&node_to_del);
-        createQuardTree(
+        qt_terrain.cleanupNode(&node_to_del);
+        qt_terrain.createQuardTree(
             glm::vec2(-20.0f, -180.0f),
             glm::vec2(60.0f, -100.0f),
             &vertex_pointer,
@@ -96,20 +109,27 @@ void updateData(bool loop)
             &element_pointer,
             g_mapped_vertex_element_data,
             g_mapped_terrain_texture_array_data,
-            &new_node
-            );
+            &new_node,
+            &(viewObj->position));
         elemant_index_terrain_length_update = element_pointer - element_pointer_old;
         element_pointer_old = element_pointer;
         createSkydome(
             g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
             g_mapped_vertex_element_data, &element_pointer,
             g_mapped_vertex_uv_data,
-            calcCoordFromPos(vertex_offset), 64, 1.5, 512);
+            calcCoordFromPos(qt_terrain.vertex_offset), 64, 1.5, 512, qt_terrain.vertex_offset);
         elemant_index_sky_length_update = element_pointer - element_pointer_old;
         printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
-        printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n", vertex_pointer, element_pointer, nodeIndex, texture_unit_index);
+        printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n",
+            vertex_pointer,
+            element_pointer,
+            qt_terrain.nodeIndex,
+            qt_terrain.texture_unit_index);
 
-        std::copy(&g_vertex_buffer_data[renderingBufferIndex][vertex_static_data_length], &g_vertex_buffer_data[renderingBufferIndex][vertex_pointer], &g_mapped_vertex_buffer_data[vertex_static_data_length]);
+        std::copy(
+            &g_vertex_buffer_data[renderingBufferIndex][vertex_static_data_length],
+            &g_vertex_buffer_data[renderingBufferIndex][vertex_pointer],
+            &g_mapped_vertex_buffer_data[vertex_static_data_length]);
 
         unmapping = true;
         updating = false;
@@ -152,14 +172,14 @@ int main( void )
     }
 
     glfwWindowHint(GLFW_SAMPLES, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow( windowW, windowH, window_title, NULL, NULL );
     if( !window )
     {
-        fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
+        fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible.\n" );
         glfwTerminate();
         return -1;
     }
@@ -173,6 +193,7 @@ int main( void )
         return -1;
     }
 
+    //glfwSetWindowPos(window, 0, 0);
     glfwSetCursorPos(window, windowW/2, windowH/2);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -193,14 +214,15 @@ int main( void )
     GLuint render_target_uniform_id = glGetUniformLocation(programID, "render_target");
     glUseProgram(programID);
 
-    setPosCoord(20.0f, -156.0f, 0.7f);
+    qt_terrain.vertex_offset = setPosCoord(20.0f, -156.0f, 0.7f);
+    viewObj = new Object();
     updateSkydomeConf(64, 512);
-    int vertex_buffer_length = getQuardTreePosLength() + getSkydomePosLength();
-    int element_buffer_length = getQuardTreeElementIndexLength() + getSkydomePosLength();
-    using_vertex_offset = vertex_offset;
-    vertex_offset_snap = using_vertex_offset;
+    int vertex_buffer_length = qt_terrain.quardtree_pos_length + getSkydomePosLength();
+    int element_buffer_length = qt_terrain.quardtree_element_index_length + getSkydomePosLength();
+    viewObj->using_vertex_offset = qt_terrain.vertex_offset;
+    vertex_offset_snap = viewObj->using_vertex_offset;
 
-    glm::detail::uint32* g_terrain_texture_array_data = new glm::detail::uint32[terrain_texture_size*terrain_texture_size];
+    glm::detail::uint32* g_terrain_texture_array_data = new glm::detail::uint32[(int)pow(qt_terrain.terrain_texture_size, 2)];
     int terrain_texture_unit_id = 0;
     glActiveTexture(GL_TEXTURE0 + terrain_texture_unit_id);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -210,15 +232,21 @@ int main( void )
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, terrain_texture_size, terrain_texture_size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_terrain_texture_array_data);
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGBA, qt_terrain.terrain_texture_size, qt_terrain.terrain_texture_size,
+        0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_terrain_texture_array_data);
     GLuint terrain_texure_uniform_id  = glGetUniformLocation(programID, "terrain_texture_sampler");
     glUniform1i(terrain_texure_uniform_id, terrain_texture_unit_id);
 
     glGenBuffers(1, &pixelBuffer);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*terrain_texture_size*terrain_texture_size, g_terrain_texture_array_data, GL_STREAM_DRAW);
+    glBufferData(
+        GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*pow(qt_terrain.terrain_texture_size, 2),
+        g_terrain_texture_array_data, GL_STREAM_DRAW);
     delete[] g_terrain_texture_array_data;
-    g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*terrain_texture_size*terrain_texture_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+    g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(
+        GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*pow(qt_terrain.terrain_texture_size, 2),
+        GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
 
     int scatter_texture_unit_id = 1;
     glActiveTexture(GL_TEXTURE0 + scatter_texture_unit_id);
@@ -228,7 +256,9 @@ int main( void )
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA, scatter_texture_size, scatter_texture_size, scatter_texture_size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_scatter_texture_array_data);
+    glTexImage3D(
+        GL_TEXTURE_3D, 0, GL_RGBA, scatter_texture_size, scatter_texture_size, scatter_texture_size,
+        0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, g_scatter_texture_array_data);
     delete[] g_scatter_texture_array_data;
     GLuint scatter_texure_uniform_id  = glGetUniformLocation(programID, "scatter_texture_sampler");
     glUniform1i(scatter_texure_uniform_id, scatter_texture_unit_id);
@@ -244,7 +274,9 @@ int main( void )
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, spacecube_texture_size, spacecube_texture_size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, spacecube_texture_array_data);
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGBA, spacecube_texture_size, spacecube_texture_size,
+        0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, spacecube_texture_array_data);
     delete[] spacecube_texture_array_data;
     GLuint spacecube_texure_uniform_id  = glGetUniformLocation(programID, "spacecube_texture_sampler");
     glUniform1i(spacecube_texure_uniform_id, spacecube_texture_unit_id);
@@ -254,37 +286,40 @@ int main( void )
     g_vertex_buffer_data = new glm::vec3*[2];
     g_vertex_buffer_data[0] = new glm::vec3[vertex_buffer_length];
     g_vertex_buffer_data[1] = new glm::vec3[vertex_buffer_length];
-    glm::vec2* g_vertex_uv_data = new glm::vec2[getQuardTreeUVLength()];
+    glm::vec2* g_vertex_uv_data = new glm::vec2[qt_terrain.quardtree_uv_length];
     createSpaceCube(g_vertex_buffer_data[0], &vertex_static_data_length, g_vertex_uv_data);
     std::copy(&g_vertex_buffer_data[0][0], &g_vertex_buffer_data[0][vertex_static_data_length], g_vertex_buffer_data[1]);
 
     glGenBuffers(2, vertexbuffer);
-    using_buffer_data = g_vertex_buffer_data[0];
+    viewObj->using_vertex = g_vertex_buffer_data[0];
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, g_vertex_buffer_data[0], GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, g_vertex_buffer_data[1], GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
-    g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(
+        GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, uvbuffer);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), g_vertex_uv_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, g_vertex_uv_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), g_vertex_uv_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, g_vertex_uv_data, GL_STREAM_DRAW);
     delete[] g_vertex_uv_data;
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-    g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*getQuardTreeUVLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(
+        GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, normalbuffer);
-    glm::vec3* g_vertex_normal_data = new glm::vec3[getQuardTreeNormalLength()];
+    glm::vec3* g_vertex_normal_data = new glm::vec3[qt_terrain.quardtree_normal_length];
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*getQuardTreeNormalLength(), g_vertex_normal_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*qt_terrain.quardtree_normal_length, g_vertex_normal_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*getQuardTreeNormalLength(), g_vertex_normal_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*qt_terrain.quardtree_normal_length, g_vertex_normal_data, GL_STREAM_DRAW);
     delete[] g_vertex_normal_data;
     glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
-    g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*getQuardTreeNormalLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(
+        GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*qt_terrain.quardtree_normal_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, elementBuffer);
     unsigned int* g_vertex_element_data = new unsigned int[element_buffer_length];
@@ -294,7 +329,8 @@ int main( void )
     glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*element_buffer_length, g_vertex_element_data, GL_STREAM_DRAW);
     delete[] g_vertex_element_data;
     glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
-    g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+    g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(
+        GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
     
 
     glEnableVertexAttribArray(0);
@@ -319,39 +355,48 @@ int main( void )
             glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
             glActiveTexture(GL_TEXTURE0 + terrain_texture_unit_id);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, terrain_texture_size, terrain_texture_size, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
+            glTexSubImage2D(
+                GL_TEXTURE_2D, 0, 0, 0, qt_terrain.terrain_texture_size, qt_terrain.terrain_texture_size,
+                GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 
             //update vars
             elemant_index_terrain_length_rendering = elemant_index_terrain_length_update;
             elemant_index_sky_length_rendering = elemant_index_sky_length_update;
-            viewPos = viewPos - vertex_offset_diff;
-            using_buffer_data = g_vertex_buffer_data[renderingBufferIndex];
-            using_vertex_offset = vertex_offset_snap;
-            node_to_del = node;
-            node = new_node;
+            viewObj->position = viewObj->position - vertex_offset_diff;
+            viewObj->using_vertex = g_vertex_buffer_data[renderingBufferIndex];
+            viewObj->using_vertex_offset = vertex_offset_snap;
+            node_to_del = qt_terrain.node;
+            qt_terrain.node = new_node;
             renderingBufferIndex = (renderingBufferIndex+1)%2;
         }
         if (frame_counter%200 == update_frame_interval*2 && updating == false && unmapping == false) {
             //orphaning and mapping the buffers that is not used and to be updated
             glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[renderingBufferIndex]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*vertex_buffer_length, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            g_mapped_vertex_buffer_data = (glm::vec3*)(glMapBufferRange(
+                GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*vertex_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             if (NULL == g_mapped_vertex_buffer_data) {
                 std::cout << "Error: " << glGetError() << std::endl;
                 throw std::runtime_error("Failed to map buffer.");
             }
             glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*getQuardTreeUVLength(), NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*getQuardTreeUVLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(
+                GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*getQuardTreeNormalLength(), NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*getQuardTreeNormalLength(), GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*qt_terrain.quardtree_normal_length, NULL, GL_STREAM_DRAW);
+            g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(
+                GL_ARRAY_BUFFER, 0, sizeof(glm::vec3)*qt_terrain.quardtree_normal_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             glBindBuffer(GL_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(unsigned int)*element_buffer_length, NULL, GL_STREAM_DRAW);
-            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+            g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(
+                GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
-            glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*terrain_texture_size*terrain_texture_size, NULL, GL_STREAM_DRAW);
-            g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*terrain_texture_size*terrain_texture_size, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
+            glBufferData(
+                GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*pow(qt_terrain.terrain_texture_size, 2), NULL, GL_STREAM_DRAW);
+            g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(
+                GL_PIXEL_UNPACK_BUFFER, 0, sizeof(glm::detail::uint32)*pow(qt_terrain.terrain_texture_size, 2),
+                GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT);
             updating = true;
         }
         frame_counter++;
@@ -361,11 +406,11 @@ int main( void )
 
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-        computeMatricesFromInputs();
+        computeMatricesFromInputs(viewObj);
         glm::mat4 M = glm::mat4(1.0f);
         glm::mat4 V = getViewMatrix();
         glm::mat4 P = getProjectionMatrix();
-        glm::mat4 notrans_VP = P * V * glm::translate(viewPos);
+        glm::mat4 notrans_VP = P * V * glm::translate(viewObj->position);
         glm::mat4 MVP = P * V * M;
         glUniformMatrix4fv(matrixMVPID, 1, GL_FALSE, &MVP[0][0]);
         glUniformMatrix4fv(matrixMID, 1, GL_FALSE, &M[0][0]);
@@ -373,8 +418,10 @@ int main( void )
         glUniformMatrix4fv(matrix_notrans_VP_ID, 1, GL_FALSE, &notrans_VP[0][0]);
         glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(0.0f, -68.0f);
         glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
-        glUniform3f(vertex_offset_uniform_id, using_vertex_offset.x, using_vertex_offset.y, using_vertex_offset.z);
-        glUniform1f(scatter_height_uniform_id, (glm::length(viewPos+using_vertex_offset)-earth_radius)/(atmosphere_top_radius-earth_radius));
+        glUniform3f(vertex_offset_uniform_id,
+            viewObj->using_vertex_offset.x, viewObj->using_vertex_offset.y, viewObj->using_vertex_offset.z);
+        glUniform1f(scatter_height_uniform_id,
+            (glm::length(viewObj->position+viewObj->using_vertex_offset)-earth_radius)/(atmosphere_top_radius-earth_radius));
 
         glDisable(GL_DEPTH_TEST);
         glUniform1i(render_target_uniform_id, 0);
@@ -382,12 +429,16 @@ int main( void )
         glEnable(GL_BLEND);
         glEnable(GL_CULL_FACE);
         glUniform1i(render_target_uniform_id, 1);
-        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>((elemant_index_terrain_length_rendering+element_static_data_length)*4));
+        glDrawElements(
+            GL_TRIANGLE_STRIP, elemant_index_sky_length_rendering, GL_UNSIGNED_INT,
+            reinterpret_cast<void*>((elemant_index_terrain_length_rendering+element_static_data_length)*4));
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         glUniform1i(render_target_uniform_id, 2);
-        glDrawElements(GL_TRIANGLE_STRIP, elemant_index_terrain_length_rendering, GL_UNSIGNED_INT, reinterpret_cast<void*>(element_static_data_length*4));
+        glDrawElements(
+            GL_TRIANGLE_STRIP, elemant_index_terrain_length_rendering, GL_UNSIGNED_INT,
+            reinterpret_cast<void*>(element_static_data_length*4));
 
         // Swap buffers
         glfwSwapBuffers(window);

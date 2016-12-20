@@ -28,7 +28,7 @@ void updateSkydomeConf(int circular_count, int radius_count) {
     g_radius_count = radius_count;
 }
 
-glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_origin, float lng_origin) {
+glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_origin, float lng_origin, glm::vec3 vertex_offset) {
     glm::vec3 pos = glm::vec3(
         (double)atmosphere_top_radius * std::cos(lat_offset) * std::cos(lng_offset),
         (double)atmosphere_top_radius * std::sin(lat_offset),
@@ -40,19 +40,29 @@ glm::vec3 calcMDSkyPosFromCoord(float lat_offset, float lng_offset, float lat_or
     return pos;
 }
 
-void createSkydome(glm::vec3* vertex, int* vertex_offset, unsigned int* element_index, int* element_index_offset, glm::vec2* vertex_uv, glm::vec2 view_coord, int circular_count, float radius_range, int radius_count) {
-    int vertex_offset_init = *vertex_offset;
+void createSkydome(
+        glm::vec3* vertex,
+        int* vertex_idx_offset,
+        unsigned int* element_index,
+        int* element_index_offset,
+        glm::vec2* vertex_uv,
+        glm::vec2 view_coord,
+        int circular_count,
+        float radius_range,
+        int radius_count,
+        glm::vec3 vertex_pos_offset) {
+    int vertex_offset_init = *vertex_idx_offset;
     int pointer = vertex_offset_init;
     float circle_interval = 2*pi/circular_count;
     float radius_interval = radius_range/radius_count;
     glm::vec2 zero_color_uv = glm::vec2(0.99f, 0.99f);
     for (int i=0; i<radius_count; i++) {
         for (int j=0; j<circular_count; j++) {
-            vertex[pointer] = calcMDSkyPosFromCoord(pi/2 - radius_interval*i, circle_interval*j, view_coord.x, view_coord.y);
+            vertex[pointer] = calcMDSkyPosFromCoord(pi/2 - radius_interval*i, circle_interval*j, view_coord.x, view_coord.y, vertex_pos_offset);
             vertex_uv[pointer++] = zero_color_uv;
         }
     }
-    *vertex_offset = pointer;
+    *vertex_idx_offset = pointer;
 
     pointer = vertex_offset_init;
     int element_ptr = *element_index_offset;

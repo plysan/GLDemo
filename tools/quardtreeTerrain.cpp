@@ -21,60 +21,45 @@
 #include "vars.hpp"
 #include "tools.hpp"
 
-extern glm::vec3 viewPos;
-glm::vec3 vertex_offset;
-glm::vec3 vertex_offset_diff;
+extern glm::vec3 vertex_offset_diff;
 
-Node* node = NULL;
-glm::vec3* result;
-glm::vec2* result_uv;
-static unsigned int* result_index;
-static glm::vec3* result_normal;
-
-// dinmension must be 2^n+1 where n is int
-int dinmension = 33;
-static int ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
-int maxNodes = 1000;
-int vertexBufferSize = dinmension*dinmension*maxNodes;
-int ele_index_size = maxNodes*ele_index_node_size;
-int nodeIndex = 0;
-int vertex_index_offset = 0;
-int element_index_offset = 0;
-//TODO not static
-static float minNodeSize = 0.5f;
-static float maxNodeSize = 100.0f;
-float one_degree_lat_length = glm::length(calcFPosFromCoord(0.0f, 0.0f) - calcFPosFromCoord(1.0f, 0.0f));
-
-static int texture_unit_size = 128;
-static int texture_unit_size_dem = 3600;
-static int texture_unit_dinmension = 16;
-int terrain_texture_size = texture_unit_size*texture_unit_dinmension;
-static int terrain_texture_units = texture_unit_dinmension * texture_unit_dinmension - 1;
-static uint32* texture;
-int texture_unit_index = 0;
-int lod_max = 4;
-
-int getQuardTreePosLength() {
-    return maxNodes * dinmension * dinmension;
+QTProfile::QTProfile(
+        int dinmension,
+        int maxNodes,
+        float minNodeSize,
+        float maxNodeSize,
+        int texture_unit_size,
+        int texture_unit_size_dem,
+        int texture_unit_dinmension,
+        int lod_max):
+        dinmension(dinmension),
+        maxNodes(maxNodes),
+        minNodeSize(minNodeSize),
+        maxNodeSize(maxNodeSize),
+        texture_unit_size(texture_unit_size),
+        texture_unit_size_dem(texture_unit_size_dem),
+        texture_unit_dinmension(texture_unit_dinmension),
+        lod_max(lod_max) {
+    vertex_offset = glm::vec3();
+    elevation_divisor = earth_radius * 10000.0f;
+    updateValues();
 }
 
-int getQuardTreeUVLength() {
-    return maxNodes * dinmension * dinmension;
+void QTProfile::updateValues() {
+    ele_index_node_size = 2 * dinmension * (dinmension - 1) + 2;
+    vertexBufferSize = dinmension*dinmension*maxNodes;
+    ele_index_size = maxNodes*ele_index_node_size;
+    one_degree_lat_length = glm::length(calcFPosFromCoord(0.0f, 0.0f) - calcFPosFromCoord(1.0f, 0.0f));
+    terrain_texture_size = texture_unit_size*texture_unit_dinmension;
+    terrain_texture_units = texture_unit_dinmension * texture_unit_dinmension - 1;
+    quardtree_pos_length = maxNodes * dinmension * dinmension;
+    quardtree_uv_length = maxNodes * dinmension * dinmension;
+    quardtree_element_index_length = maxNodes * ele_index_node_size;
+    quardtree_normal_length = maxNodes * dinmension * dinmension;
+    terrain_texture_length = terrain_texture_size*terrain_texture_size;
 }
 
-int getQuardTreeElementIndexLength() {
-    return maxNodes * ele_index_node_size;
-}
-
-int getQuardTreeNormalLength() {
-    return maxNodes * dinmension * dinmension;
-}
-
-int getTerrainTextureLength() {
-    return terrain_texture_size*terrain_texture_size;
-}
-
-glm::dvec3 calcMDTerrainPosFromCoord(double lat, double lng) {
+glm::dvec3 QTProfile::calcMDTerrainPosFromCoord(double lat, double lng) {
     return glm::dvec3(
         (double)earth_radius * std::cos(lat) * std::cos(lng) - vertex_offset.x,
         (double)earth_radius * std::sin(lat) - vertex_offset.y,
@@ -82,7 +67,7 @@ glm::dvec3 calcMDTerrainPosFromCoord(double lat, double lng) {
     );
 }
 
-void interpolatePos2D(glm::dvec2 bl_coord, glm::dvec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
+void QTProfile::interpolatePos2D(glm::dvec2 bl_coord, glm::dvec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int mid_pos_index, int unit_size) {
     glm::dvec2 mt_coord = glm::dvec2(tr_coord.x, (bl_coord.y+tr_coord.y)/2.0);
     glm::dvec2 mb_coord = glm::dvec2(bl_coord.x, (bl_coord.y+tr_coord.y)/2.0);
     glm::dvec2 ml_coord = glm::dvec2((bl_coord.x+tr_coord.x)/2.0, bl_coord.y);
@@ -109,7 +94,7 @@ void interpolatePos2D(glm::dvec2 bl_coord, glm::dvec2 tr_coord, glm::vec2 bl_uv,
     }
 }
 
-void interpolatePos1D(glm::dvec2 frst_coord, glm::dvec2 lst_coord, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
+void QTProfile::interpolatePos1D(glm::dvec2 frst_coord, glm::dvec2 lst_coord, glm::vec2 frst_uv, glm::vec2 lst_uv, int mid_pos_index, int interval, int unit_size) {
     glm::dvec2 mid_coord = (frst_coord + lst_coord)/2.0;
     result[mid_pos_index] = calcMDTerrainPosFromCoord(mid_coord.x, mid_coord.y);
     glm::vec2 mid_uv = (frst_uv + lst_uv)/2.0f;
@@ -120,15 +105,13 @@ void interpolatePos1D(glm::dvec2 frst_coord, glm::dvec2 lst_coord, glm::vec2 frs
     }
 }
 
-void elevationOffset(glm::vec3 *result, double elevation_factor) {
+void QTProfile::elevationOffset(glm::vec3 *result, double elevation_factor) {
     result->x = ((double)result->x + (double)vertex_offset.x) * elevation_factor - (double)vertex_offset.x;
     result->y = ((double)result->y + (double)vertex_offset.y) * elevation_factor - (double)vertex_offset.y;
     result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
 }
 
-float elevation_divisor = earth_radius * 10000.0f;
-
-void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
+void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
     if (nodeIndex >= maxNodes) {
         *node = NULL;
         return;
@@ -231,7 +214,7 @@ void addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, gl
     nodeIndex++;
 }
 
-float calResultNormalwithRoughness(int ele_index, int offset_a, int offset_b, bool add_roughness) {
+float QTProfile::calResultNormalwithRoughness(int ele_index, int offset_a, int offset_b, bool add_roughness) {
     int result_index_p = result_index[ele_index];
     result_normal[result_index_p] = glm::normalize(glm::cross(
         result[result_index[ele_index+offset_a]] - result[result_index_p],
@@ -243,7 +226,7 @@ float calResultNormalwithRoughness(int ele_index, int offset_a, int offset_b, bo
     }
 }
 
-float genNodeElementNormalwithRoughness(int idx) {
+float QTProfile::genNodeElementNormalwithRoughness(int idx) {
     float roughness = 0.0f;
     int base_ele_index = element_index_offset + idx * ele_index_node_size;
     int baseIndex_copy = vertex_index_offset + idx * dinmension * dinmension;
@@ -292,7 +275,7 @@ float genNodeElementNormalwithRoughness(int idx) {
     return roughness;
 }
 
-bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image_coord, glm::vec2 bl_coord, glm::vec2 tr_coord) {
+bool QTProfile::getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image_coord, glm::vec2 bl_coord, glm::vec2 tr_coord) {
     std::stringstream ss;
     float coord_span = tr_coord.x - bl_coord.x;
     float coord_span_lod = 1.0f/lod_max;
@@ -333,7 +316,7 @@ bool getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image
     return *tif != NULL;
 }
 
-bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
+bool QTProfile::readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
     bool created = false;
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<float>::digits10+1);
@@ -404,7 +387,7 @@ bool readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int
     return created;
 }
 
-bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
+bool QTProfile::readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     std::stringstream ss;
     ss << "assets/def_img.tif";
     TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
@@ -436,14 +419,14 @@ bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     }
 }
 
-glm::vec2 getNewUv() {
+glm::vec2 QTProfile::getNewUv() {
     float delta = 1.0f/(float)texture_unit_dinmension;
     glm::vec2 new_texture_unit_uv_base = glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
     texture_unit_index++;
     return new_texture_unit_uv_base;
 }
 
-glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
+glm::vec2 QTProfile::new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
     if (texture_unit_index >= terrain_texture_units) {
         texture_unit_index--;
     } else if (!detailed) {
@@ -474,7 +457,7 @@ glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed
     return getNewUv();
 }
 
-void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node) {
+void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node, glm::vec3* viewing_pos) {
     if (tr_coord.x-bl_coord.x==0 || tr_coord.y-bl_coord.y==0) {
         *node = NULL;
         return;
@@ -507,7 +490,7 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
     if (node_size < minNodeSize) {
         return;
     }
-    glm::vec3 viewer_pos = vertex_offset - vertex_offset_diff + viewPos;
+    glm::vec3 viewer_pos = vertex_offset - vertex_offset_diff + *viewing_pos;
     float view_node_mid_distance = glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - viewer_pos);
     float view_height_sealevel = glm::abs(glm::length(viewer_pos) - earth_radius) + 0.01f;
     float view_node_mid_distance_horizontal = sqrt(pow(view_node_mid_distance, 2) - pow(view_height_sealevel, 2));
@@ -541,17 +524,28 @@ void selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::ve
         level++;
 
         (*node)->tl = new Node;
-        selectNode(ml_coord, mt_coord, glm::vec2(bl_uv.x, mid_uv.y), glm::vec2(mid_uv.x, tr_uv.y), level, &((*node)->tl));
+        selectNode(ml_coord, mt_coord, glm::vec2(bl_uv.x, mid_uv.y), glm::vec2(mid_uv.x, tr_uv.y), level, &((*node)->tl), viewing_pos);
         (*node)->bl = new Node;
-        selectNode(bl_coord, mid_coord, bl_uv, mid_uv, level, &((*node)->bl));
+        selectNode(bl_coord, mid_coord, bl_uv, mid_uv, level, &((*node)->bl), viewing_pos);
         (*node)->tr = new Node;
-        selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level, &((*node)->tr));
+        selectNode(mid_coord, tr_coord, mid_uv, tr_uv, level, &((*node)->tr), viewing_pos);
         (*node)->br = new Node;
-        selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level, &((*node)->br));
+        selectNode(mb_coord, mr_coord, glm::vec2(mid_uv.x, bl_uv.y), glm::vec2(tr_uv.x, mid_uv.y), level, &((*node)->br), viewing_pos);
     }
 }
 
-void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* vertex_index, glm::vec3* result_ret, glm::vec2* result_uv_ret, glm::vec3* result_normal_ret, int* ele_index, unsigned int* result_index_ret, uint32* texture_array, Node** new_node) {
+void QTProfile::createQuardTree(
+        glm::vec2 bl_coord,
+        glm::vec2 tr_coord,
+        int* vertex_index,
+        glm::vec3* result_ret,
+        glm::vec2* result_uv_ret,
+        glm::vec3* result_normal_ret,
+        int* ele_index,
+        unsigned int* result_index_ret,
+        uint32* texture_array,
+        Node** new_node,
+        glm::vec3* viewing_pos) {
     TIFFSetWarningHandler(NULL);
     TIFFSetErrorHandler(NULL);
     vertex_index_offset = *vertex_index;
@@ -568,7 +562,7 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* vertex_index, 
     if(tr_coord.y > bl_coord.y) {
         readGlobalImageToTexture(bl_coord, tr_coord);
         texture_unit_index++;
-        selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), delta_coord, 0, new_node);
+        selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), delta_coord, 0, new_node, viewing_pos);
     } else {
         (*new_node)->lat_mid = 90.0f;
         (*new_node)->lng_mid = 0.0f;
@@ -580,16 +574,16 @@ void createQuardTree(glm::vec2 bl_coord, glm::vec2 tr_coord, int* vertex_index, 
         glm::vec2 bl_coord_mid = glm::vec2(bl_coord.x, -180.0f);
         readGlobalImageToTexture(bl_coord, tr_coord_mid);
         glm::vec2 uv0 = getNewUv();
-        selectNode(bl_coord, tr_coord_mid, uv0, uv0+delta_coord, 0, &((*new_node)->br));
+        selectNode(bl_coord, tr_coord_mid, uv0, uv0+delta_coord, 0, &((*new_node)->br), viewing_pos);
         readGlobalImageToTexture(bl_coord_mid, tr_coord);
         glm::vec2 uv1 = getNewUv();
-        selectNode(bl_coord_mid, tr_coord, uv1, uv1+delta_coord, 0, &((*new_node)->bl));
+        selectNode(bl_coord_mid, tr_coord, uv1, uv1+delta_coord, 0, &((*new_node)->bl), viewing_pos);
     }
     *vertex_index += nodeIndex * dinmension * dinmension;
     *ele_index += nodeIndex * ele_index_node_size;
 }
 
-void cleanupNode(Node** node) {
+void QTProfile::cleanupNode(Node** node) {
     if (*node == NULL) {
         return;
     }
@@ -602,5 +596,56 @@ void cleanupNode(Node** node) {
     pointer = (*node)->br;
     cleanupNode(&pointer);
     delete *node;
+}
+
+glm::vec3 QTProfile::getResultNormalFromCoord(glm::vec2 coord, glm::vec3* using_buffer_data, int* rIndex) {
+    Node* target_node = node;
+    Node* target_node_suspect = node;
+    while (target_node_suspect != NULL) {
+        target_node = target_node_suspect;
+        if (target_node->lat_mid > coord.x) {
+            if (target_node->lng_mid > coord.y) {
+                target_node_suspect = target_node->bl;
+            } else {
+                target_node_suspect = target_node->br;
+            }
+        } else {
+            if (target_node->lng_mid > coord.y) {
+                target_node_suspect = target_node->tl;
+            } else {
+                target_node_suspect = target_node->tr;
+            }
+        }
+    }
+    float lat_offset;
+    if(target_node->lat_bl < coord.x) {
+        lat_offset = target_node->lat_bl + target_node->node_size_lat - coord.x;
+    } else {
+        lat_offset = target_node->node_size_lat*0.99999f; // make it not reach the bondary
+    }
+    float lng_offset = coord.y - target_node->lng_bl;
+    if(lng_offset == target_node->node_size_lng)lng_offset *= 0.99999f; // make it not reach the bondary
+    float normal_index_row_offset = (lat_offset/target_node->node_size_lat * (float)(dinmension - 1));
+    float normal_index_column_offset = (lng_offset/target_node->node_size_lng * (float)(dinmension - 1));
+    int normal_index_offset = (int)normal_index_row_offset * dinmension + (int)normal_index_column_offset;
+    float lat_deviation = normal_index_row_offset - (float)(int)normal_index_row_offset;
+    float lng_deviation = normal_index_column_offset - (float)(int)normal_index_column_offset;
+    int index = target_node->start_index + normal_index_offset;
+    *rIndex = index;
+    if ((int)normal_index_row_offset%2 == 0) {
+        if (lat_deviation + lng_deviation > 1.0f) {
+            index++;
+            *rIndex = index;
+            return glm::normalize(glm::cross(using_buffer_data[index+dinmension-1] - using_buffer_data[index], using_buffer_data[index+dinmension] - using_buffer_data[index]));
+        } else {
+            return glm::normalize(glm::cross(using_buffer_data[index+dinmension] - using_buffer_data[index], using_buffer_data[index+1] - using_buffer_data[index]));
+        }
+    } else {
+        if (1.0f - lat_deviation + lng_deviation > 1.0f) {
+            return glm::normalize(glm::cross(using_buffer_data[index+dinmension+1] - using_buffer_data[index], using_buffer_data[index+1] - using_buffer_data[index]));
+        } else {
+            return glm::normalize(glm::cross(using_buffer_data[index+dinmension] - using_buffer_data[index], using_buffer_data[index+dinmension+1] - using_buffer_data[index]));
+        }
+    }
 }
 
