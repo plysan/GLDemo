@@ -220,7 +220,7 @@ float QTProfile::calResultNormalwithRoughness(int ele_index, int offset_a, int o
         result[result_index[ele_index+offset_a]] - result[result_index_p],
         result[result_index[ele_index+offset_b]] - result[result_index_p]));
     if (add_roughness) {
-        return glm::length(glm::cross(result_normal[result_index_p], result_normal[result_index_p-1]));
+        return glm::length(glm::cross(result_normal[result_index_p], result_normal[result_index[ele_index-1]]));
     } else {
         return 0.0f;
     }
