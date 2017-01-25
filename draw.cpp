@@ -57,7 +57,7 @@ QTProfile qt_terrain (
     33,     // dinmension
     1000,   // maxNodes
     0.5f,   // minNodeSize
-    100.0f, // maxNodeSize
+    600.0f, // maxNodeSize
     128,    // texture_unit_size
     3600,   // texture_unit_size_dem
     16,     // texture_unit_dinmension
@@ -99,9 +99,23 @@ void updateData(bool loop)
         vertex_offset_snap = qt_terrain.vertex_offset;
         new_node = new Node;
         qt_terrain.cleanupNode(&node_to_del);
+        glm::vec2 center_coord = calcCoordFromPos(qt_terrain.vertex_offset);
+        float height_core = glm::length(qt_terrain.vertex_offset);
+        float coord_span = std::asin(std::sqrt(std::pow(height_core, 2)-std::pow(earth_radius, 2)) / height_core) * 180.0 / pi;
+        float coord_span_int = (int)coord_span + 4.0f;
+        float lng_left_span = (int)(center_coord.y)-coord_span_int;
+        if(lng_left_span < -180.0f)lng_left_span = 360.0f + lng_left_span;
+        float lng_right_span = (int)(center_coord.y)+coord_span_int;
+        if(lng_right_span > 180.0f)lng_right_span = lng_right_span - 360.0f;
+        glm::vec2 bl_boundary = glm::vec2(
+            glm::min(89.0f, glm::max(-89.0f, (int)(center_coord.x)-coord_span_int)),
+            lng_left_span);
+        glm::vec2 tr_boundary = glm::vec2(
+            glm::min(89.0f, glm::max(-89.0f, (int)(center_coord.x)+coord_span_int)),
+            lng_right_span);
         qt_terrain.createQuardTree(
-            glm::vec2(-20.0f, -180.0f),
-            glm::vec2(60.0f, -100.0f),
+            bl_boundary,
+            tr_boundary,
             &vertex_pointer,
             g_vertex_buffer_data[renderingBufferIndex],
             g_mapped_vertex_uv_data,

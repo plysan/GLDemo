@@ -492,12 +492,12 @@ void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_
     }
     glm::vec3 viewer_pos = vertex_offset - vertex_offset_diff + *viewing_pos;
     float view_node_mid_distance = glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - viewer_pos);
-    float view_height_sealevel = glm::abs(glm::length(viewer_pos) - earth_radius) + 0.01f;
-    float view_node_mid_distance_horizontal = sqrt(pow(view_node_mid_distance, 2) - pow(view_height_sealevel, 2));
-    float node_view_size_arc = atan((view_node_mid_distance_horizontal+node_size/2)/view_height_sealevel)
-            - atan((view_node_mid_distance_horizontal-node_size/2)/view_height_sealevel);
-    if (view_node_mid_distance < node_size
-            || node_view_size_arc > 0.174532925f // ~ 10 degrees
+    float view_height_sealevel = glm::abs(glm::length(viewer_pos) - earth_radius) + 0.5f; // less sensitive to lod change near sealevel
+    float view_node_mid_distance_horizontal = sqrt(glm::max(pow(view_node_mid_distance, 2) - pow(view_height_sealevel, 2), 0.0));
+    float node_view_size_arc = atan((view_node_mid_distance_horizontal+node_size*0.708f)/view_height_sealevel) // 0.708 ~ 2^0.5/2
+        - atan((view_node_mid_distance_horizontal-node_size*0.708f)/view_height_sealevel);
+    float node_area = (tr_coord.x-bl_coord.x)*(tr_coord.y-bl_coord.y);
+    if (roughness>(pow(view_height_sealevel,2)*0.001f+0.1f)/node_area && node_view_size_arc > 0.15f //TODO param configurable
             || node_size > maxNodeSize) {
         nodeIndex--;
         glm::vec2 tl_coord = glm::vec2(tr_coord.x, bl_coord.y);
