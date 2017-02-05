@@ -59,7 +59,6 @@ QTProfile qt_terrain (
     0.5f,   // minNodeSize
     600.0f, // maxNodeSize
     128,    // texture_unit_size
-    3600,   // texture_unit_size_dem
     16,     // texture_unit_dinmension
     4);     // lod_max
 

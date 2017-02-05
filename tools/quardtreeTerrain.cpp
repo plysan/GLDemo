@@ -29,7 +29,6 @@ QTProfile::QTProfile(
         float minNodeSize,
         float maxNodeSize,
         int texture_unit_size,
-        int texture_unit_size_dem,
         int texture_unit_dinmension,
         int lod_max):
         dinmension(dinmension),
@@ -37,7 +36,6 @@ QTProfile::QTProfile(
         minNodeSize(minNodeSize),
         maxNodeSize(maxNodeSize),
         texture_unit_size(texture_unit_size),
-        texture_unit_size_dem(texture_unit_size_dem),
         texture_unit_dinmension(texture_unit_dinmension),
         lod_max(lod_max) {
     vertex_offset = glm::vec3();
@@ -149,12 +147,18 @@ void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec
         ss << "assets/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
         TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
         if (tif != NULL) {
+            uint32 imageW, imageH;
+            TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
+            TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
+            // dem file dinmension has 1 more pixel
+            imageW--;
+            imageH--;
             short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
             int base_index = baseIndex;
             for (int i=0; i<dinmension; i++) {
-                TIFFReadEncodedStrip(tif, (int)((bl_coord_lat_texture_offset + (float)i/((float)dinmension - 1.0f) * (tr_coord.x - bl_coord.x)) * (float)texture_unit_size_dem), buf, TIFFStripSize(tif));
+                TIFFReadEncodedStrip(tif, (int)((bl_coord_lat_texture_offset + (float)i/((float)dinmension - 1.0f) * (tr_coord.x - bl_coord.x)) * (float)imageH), buf, TIFFStripSize(tif));
                 for (int j=0; j<dinmension; j++) {
-                    double elevation_factor = (((double)(short)buf[(int)((bl_coord_lng_texture_offset + (double)j/((double)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (double)texture_unit_size_dem)])/elevation_divisor + 1.0f);
+                    double elevation_factor = (((double)(short)buf[(int)((bl_coord_lng_texture_offset + (double)j/((double)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (double)imageW)])/elevation_divisor + 1.0f);
                     elevationOffset(&result[base_index++], elevation_factor);
                 }
             }
@@ -162,9 +166,6 @@ void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec
             TIFFClose(tif);
         }
     } else {
-        // dinmension covers points on both edges of node, so we need to -1
-        float scale_x = (float)texture_unit_size_dem/((float)(dinmension-1)/coords_spaned_x);
-        float scale_y = (float)texture_unit_size_dem/((float)(dinmension-1)/coords_spaned_y);
         for (int i=(int)bl_coord.x; i<(int)tr_coord.x; i++) {
             for (int j=(int)bl_coord.y; j<(int)tr_coord.y; j++) {
                 //TODO lat/lng organization in node array ?
@@ -183,6 +184,12 @@ void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec
                     uint32 imageW, imageH;
                     TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
                     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
+                    // dem file dinmension has 1 more pixel
+                    imageW--;
+                    imageH--;
+                    // dinmension covers points on both edges of node, so we need to -1
+                    float scale_x = (float)imageH/((float)(dinmension-1)/coords_spaned_x);
+                    float scale_y = (float)imageW/((float)(dinmension-1)/coords_spaned_y);
                     short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
                     int last_index_strip = -1;
                     for (float strip=0.0f; strip<(float)TIFFNumberOfStrips(tif); strip+=scale_x) {

@@ -44,7 +44,6 @@ class QTProfile {
 
     uint32* texture;
     int texture_unit_size;
-    int texture_unit_size_dem;
     int texture_unit_dinmension;
     int terrain_texture_size;
     int terrain_texture_units;
@@ -63,7 +62,6 @@ class QTProfile {
         float minNodeSize,
         float maxNodeSize,
         int texture_unit_size,
-        int texture_unit_size_dem,
         int texture_unit_dinmension,
         int lod_max);
     void updateValues();
