@@ -98,6 +98,7 @@ class QTProfile {
         int interval,
         int unit_size);
     void elevationOffset(glm::vec3 *result, double elevation_factor);
+    void readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span);
     void addNodeToResult(
         glm::vec2 bl_coord,
         glm::vec2 tr_coord,

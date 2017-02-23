@@ -109,6 +109,105 @@ void QTProfile::elevationOffset(glm::vec3 *result, double elevation_factor) {
     result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
 }
 
+/*
+ * Convention:
+ *  only use two types of image file: global image, and 1 degree scale image.
+ *  image file is in tiff format, with no compression, 1 row per strip, and can have any size.
+ */
+void QTProfile::readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span) {
+    int node_base_index = vertex_index_offset + nodeIndex * dinmension * dinmension;
+    bool negative_lat = node_bl_coord.x < 0.0f;
+    bool negative_lng = node_bl_coord.y < 0.0f;
+    char ns = negative_lat ? 's' : 'n';
+    char ew = negative_lng ? 'w' : 'e';
+    float node_bl_coord_img_name_lat = (int)std::abs(node_bl_coord.x);
+    float node_bl_coord_img_name_lng = (int)std::abs(node_bl_coord.y);
+    float node_detail_offset_lat = node_bl_coord.x - (float)(int)node_bl_coord.x;
+    if (node_detail_offset_lat < 0.0f) {
+        node_detail_offset_lat += 1.0f;
+        node_bl_coord_img_name_lat++;
+    }
+    float node_detail_offset_lng = node_bl_coord.y - (float)(int)node_bl_coord.y;
+    if (node_detail_offset_lng < 0.0f) {
+        node_detail_offset_lng += 1.0f;
+        node_bl_coord_img_name_lng++;
+    }
+    int node_span_int_lat = std::max((int)node_span.x, 1);
+    int node_span_int_lng = std::max((int)node_span.y, 1);
+    std::stringstream ss;
+    for (int lat_offset = 0; lat_offset<node_span_int_lat; lat_offset++) {
+        for (int lng_offset = 0; lng_offset<node_span_int_lng; lng_offset++) {
+            // node corner coordinates in the coordinate system which target image size is 1 unit and bl corner of target image is origin
+            double begin_node_lat, end_node_lat, delta_node_lat, begin_node_lng, end_node_lng, delta_node_lng;
+            // clamp range of discrete points in the node that target image is overlapping
+            double min_lat, max_lat, min_lng, max_lng;
+            ss.str("");
+            ss << "assets/" << ns << (negative_lat?node_bl_coord_img_name_lat-lat_offset:node_bl_coord_img_name_lat+lat_offset)
+                    << '_' << ew << (negative_lng?node_bl_coord_img_name_lng-lng_offset:node_bl_coord_img_name_lng+lng_offset)
+                    << "_1arc_v2.tif";
+            TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
+            if (tif != NULL) {
+                begin_node_lat = node_detail_offset_lat - lat_offset;
+                end_node_lat = begin_node_lat + node_span.x;
+                delta_node_lat = (end_node_lat - begin_node_lat) / (dinmension-1);
+                begin_node_lng = node_detail_offset_lng - lng_offset;
+                end_node_lng = begin_node_lng + node_span.y;
+                delta_node_lng = (end_node_lng - begin_node_lng) / (dinmension-1);
+                min_lat = begin_node_lat + lat_offset + delta_node_lat/2;
+                max_lat = min_lat + std::min(node_span.x, 1.0f);
+                if (lat_offset==0) min_lat -= delta_node_lat;
+                min_lng = begin_node_lng + lng_offset + delta_node_lng/2;
+                max_lng = min_lng + std::min(node_span.y, 1.0f);
+                if (lng_offset==0) min_lng -= delta_node_lng;
+                min_lat = begin_node_lat + std::ceil((min_lat-begin_node_lat)/delta_node_lat) * delta_node_lat;
+                min_lng = begin_node_lng + std::ceil((min_lng-begin_node_lng)/delta_node_lng) * delta_node_lng;
+            } else {
+                ss.str("");
+                ss << "assets/def_dem.tif";
+                tif = TIFFOpen(ss.str().c_str(), "r");
+                if (tif != NULL) {
+                    begin_node_lat = (90.0 + node_bl_coord.x) / 180.0;
+                    end_node_lat = begin_node_lat + node_span.x/180.0;
+                    delta_node_lat = (end_node_lat - begin_node_lat) / (dinmension-1);
+                    begin_node_lng = (180.0 + node_bl_coord.y) / 360.0;
+                    end_node_lng = begin_node_lng + node_span.y/360.0;
+                    delta_node_lng = (end_node_lng - begin_node_lng) / (dinmension-1);
+                    min_lat = begin_node_lat + lat_offset/180.0 + delta_node_lat/2;
+                    max_lat = min_lat + std::min(node_span.x, 1.0f)/180.0;
+                    if (lat_offset==0) min_lat -= delta_node_lat;
+                    min_lng = begin_node_lng + lng_offset/360.0 + delta_node_lng/2;
+                    max_lng = min_lng + std::min(node_span.y, 1.0f)/360.0;
+                    if (lng_offset==0) min_lng -= delta_node_lng;
+                    min_lat = begin_node_lat + std::ceil((min_lat-begin_node_lat)/delta_node_lat) * delta_node_lat;
+                    min_lng = begin_node_lng + std::ceil((min_lng-begin_node_lng)/delta_node_lng) * delta_node_lng;
+                } else {
+                    return;
+                }
+            }
+            if (tif != NULL) {
+                // dem file dinmension should have 1 more pixel
+                uint32 image_w, image_h;
+                TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
+                TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
+                image_w--;
+                image_h--;
+                short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
+                for(double i=min_lat; i<max_lat; i+=delta_node_lat) {
+                    int write_index_lat = node_base_index + (int)std::round((end_node_lat-i)/delta_node_lat) * dinmension;
+                    TIFFReadEncodedStrip(tif, (int)std::round((1.0-i) * image_h), buf, TIFFStripSize(tif));
+                    for(double j=min_lng; j<max_lng; j+=delta_node_lng) {
+                        int write_index_lng = write_index_lat + (int)std::round((j-begin_node_lng)/delta_node_lng);
+                        double elevation_factor = ((double)(short)buf[(int)std::round(j * image_w)])/elevation_divisor + 1.0f;
+                        elevationOffset(&result[write_index_lng], elevation_factor);
+                    }
+                }
+                _TIFFfree(buf);
+                TIFFClose(tif);
+            }
+        }
+    }
+}
+
 void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
     if (nodeIndex >= maxNodes) {
         *node = NULL;
@@ -133,91 +232,7 @@ void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec
     result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
     result_uv[baseIndex + dinmension * (dinmension - 1)] = bl_uv;
 
-    int coords_spaned_x = (int)(tr_coord.x - bl_coord.x);
-    int coords_spaned_y = (int)(tr_coord.y - bl_coord.y);
-    if (coords_spaned_x == 0) {
-        float bl_coord_lat_texture_offset = 1.0f - (bl_coord.x - (float)(int)bl_coord.x) - (tr_coord.x - bl_coord.x);
-        float bl_coord_lng_texture_offset = bl_coord.y - (float)(int)bl_coord.y;
-        if (bl_coord_lng_texture_offset < 0.0f) {
-            bl_coord_lng_texture_offset += 1.0f;
-        }
-        char ns = bl_coord.x<0.0f ? 's' : 'n';
-        char ew = bl_coord.y<0.0f ? 'w' : 'e';
-        std::stringstream ss;
-        ss << "assets/" << ns << (int)bl_coord.x << '_' << ew << (bl_coord.y < 0.0f && bl_coord_lng_texture_offset > 0.0001f ? -(int)bl_coord.y+1 : -(int)bl_coord.y) << "_1arc_v2.tif";
-        TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
-        if (tif != NULL) {
-            uint32 imageW, imageH;
-            TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
-            TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
-            // dem file dinmension has 1 more pixel
-            imageW--;
-            imageH--;
-            short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
-            int base_index = baseIndex;
-            for (int i=0; i<dinmension; i++) {
-                TIFFReadEncodedStrip(tif, (int)((bl_coord_lat_texture_offset + (float)i/((float)dinmension - 1.0f) * (tr_coord.x - bl_coord.x)) * (float)imageH), buf, TIFFStripSize(tif));
-                for (int j=0; j<dinmension; j++) {
-                    double elevation_factor = (((double)(short)buf[(int)((bl_coord_lng_texture_offset + (double)j/((double)dinmension - 1.0f) * (tr_coord.y - bl_coord.y)) * (double)imageW)])/elevation_divisor + 1.0f);
-                    elevationOffset(&result[base_index++], elevation_factor);
-                }
-            }
-            _TIFFfree(buf);
-            TIFFClose(tif);
-        }
-    } else {
-        for (int i=(int)bl_coord.x; i<(int)tr_coord.x; i++) {
-            for (int j=(int)bl_coord.y; j<(int)tr_coord.y; j++) {
-                //TODO lat/lng organization in node array ?
-                int base_index_unit = vertex_index_offset + nodeIndex * dinmension * dinmension + dinmension/coords_spaned_x*(coords_spaned_x-1-i+(int)bl_coord.x)*dinmension + dinmension/coords_spaned_y*(j-(int)bl_coord.y);
-                int bl_coord_lat = i;
-                int bl_coord_lng = j;
-                std::stringstream ss;
-                char ns = bl_coord_lat<0 ? 's' : 'n';
-                char ew = bl_coord_lng<0 ? 'w' : 'e';
-                if (bl_coord_lng < 0) {
-                    bl_coord_lng = -bl_coord_lng;
-                }
-                ss << "assets/" << ns << bl_coord_lat << '_' << ew << bl_coord_lng << "_1arc_v2.tif";
-                TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
-                if (tif != NULL) {
-                    uint32 imageW, imageH;
-                    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
-                    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
-                    // dem file dinmension has 1 more pixel
-                    imageW--;
-                    imageH--;
-                    // dinmension covers points on both edges of node, so we need to -1
-                    float scale_x = (float)imageH/((float)(dinmension-1)/coords_spaned_x);
-                    float scale_y = (float)imageW/((float)(dinmension-1)/coords_spaned_y);
-                    short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
-                    int last_index_strip = -1;
-                    for (float strip=0.0f; strip<(float)TIFFNumberOfStrips(tif); strip+=scale_x) {
-                        if ((int)(strip/scale_x) != last_index_strip) {
-                            TIFFReadEncodedStrip(tif, (int)strip, buf, TIFFStripSize(tif));
-                            last_index_strip = (int)(strip/scale_x);
-                        } else {
-                            continue;
-                        }
-                        elevationOffset(&result[base_index_unit], (((double)(short)buf[0])/elevation_divisor + 1.0f));
-                        int last_index_row = base_index_unit;
-                        for (float k=scale_y; k<((float)(TIFFStripSize(tif)))/(float)sizeof(short); k+=scale_y) {
-                            if (base_index_unit + (int)(k/scale_y) != last_index_row) {
-                                // The index of result cannot be plus one in every loop, but cast from float, why?
-                                elevationOffset(&result[base_index_unit + (int)(k/scale_y)], (((double)(short)buf[(int)(k)])/elevation_divisor + 1.0f));
-                                last_index_row = base_index_unit + (int)(k/scale_y);
-                            }
-                        }
-                        base_index_unit += dinmension;
-                    }
-                    //end of row
-                    _TIFFfree(buf);
-                    TIFFClose(tif);
-                }
-            }
-        }
-    }
-
+    readDEMFromTif(bl_coord, glm::vec2(tr_coord.x-bl_coord.x, tr_coord.y-bl_coord.y));
     nodeIndex++;
 }
 
