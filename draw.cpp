@@ -207,7 +207,7 @@ int main( void )
     }
 
     //glfwSetWindowPos(window, 0, 0);
-    glfwSetCursorPos(window, windowW/2, windowH/2);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
