@@ -56,6 +56,10 @@ class QTProfile {
     int quardtree_normal_length;
     int terrain_texture_length;
 
+    TIFF *def_dem;
+    TIFF *def_img;
+    void* buf;
+
     QTProfile(
         int dinmension,
         int maxNodes,
@@ -64,6 +68,7 @@ class QTProfile {
         int texture_unit_size,
         int texture_unit_dinmension,
         int lod_max);
+    ~QTProfile();
     void updateValues();
     void createQuardTree(
         glm::vec2 bl_coord,
@@ -98,34 +103,21 @@ class QTProfile {
         int interval,
         int unit_size);
     void elevationOffset(glm::vec3 *result, double elevation_factor);
-    void readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span);
-    void addNodeToResult(
+    void readDATAFromIMG(glm::vec2 node_bl_coord, glm::vec2 node_span, int data_base_index, const char* img_suffix);
+    bool addNodeToResult(
         glm::vec2 bl_coord,
         glm::vec2 tr_coord,
         glm::vec2 bl_uv,
-        glm::vec2 tr_uv,
-        Node** node);
+        glm::vec2 tr_uv);
     float calResultNormalwithRoughness(
         int ele_index,
         int offset_a,
         int offset_b,
         bool add_roughness);
     float genNodeElementNormalwithRoughness(int idx);
-    bool getImageFromCoords(
-        TIFF** tif,
-        glm::vec2* image_bl_coord,
-        float* span_image_coord,
-        glm::vec2 bl_coord,
-        glm::vec2 tr_coord);
-    bool readImageToTexture(
-        glm::vec2 bl_coord,
-        glm::vec2 tr_coord,
-        int scale_x,
-        int scale_y,
-        int base_index_unit);
-    bool readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord);
     glm::vec2 getNewUv();
-    glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed);
+    int getTextureIndex();
+    glm::vec2 new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord);
     void selectNode(
         glm::vec2 bl_coord,
         glm::vec2 tr_coord,

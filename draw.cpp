@@ -81,6 +81,7 @@ void updateWindowTitle() {
 void updateData(bool loop)
 {
     do {
+        std::this_thread::sleep_for (std::chrono::seconds(1));
         if (terminating) {
             terminating = false;
             return;
@@ -146,7 +147,6 @@ void updateData(bool loop)
 
         unmapping = true;
         updating = false;
-        std::this_thread::sleep_for (std::chrono::seconds(1));
     } while (loop);
 }
 

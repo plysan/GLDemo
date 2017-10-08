@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -40,7 +41,17 @@ QTProfile::QTProfile(
         lod_max(lod_max) {
     vertex_offset = glm::vec3();
     elevation_divisor = earth_radius * 10000.0f;
+    // make sure malloc is enough for one strip
+    buf = _TIFFmalloc(262144L);
+    def_dem = TIFFOpen("assets/def_dem.tif", "r");
+    def_img = TIFFOpen("assets/def_img.tif", "r");
     updateValues();
+}
+
+QTProfile::~QTProfile() {
+    _TIFFfree(buf);
+    TIFFClose(def_dem);
+    TIFFClose(def_img);
 }
 
 void QTProfile::updateValues() {
@@ -114,8 +125,15 @@ void QTProfile::elevationOffset(glm::vec3 *result, double elevation_factor) {
  *  only use two types of image file: global image, and 1 degree scale image.
  *  image file is in tiff format, with no compression, 1 row per strip, and can have any size.
  */
-void QTProfile::readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span) {
-    int node_base_index = vertex_index_offset + nodeIndex * dinmension * dinmension;
+void QTProfile::readDATAFromIMG(glm::vec2 node_bl_coord, glm::vec2 node_span, int data_base_index, const char* img_suffix) {
+    int node_dinmension;
+    if (strcmp(img_suffix, "dem") == 0) {
+        node_dinmension = dinmension;
+    } else if (strcmp(img_suffix, "img") == 0) {
+        node_dinmension = texture_unit_size;
+    } else {
+        return;
+    }
     bool negative_lat = node_bl_coord.x < 0.0f;
     bool negative_lng = node_bl_coord.y < 0.0f;
     char ns = negative_lat ? 's' : 'n';
@@ -144,15 +162,16 @@ void QTProfile::readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span) {
             ss.str("");
             ss << "assets/" << ns << (negative_lat?node_bl_coord_img_name_lat-lat_offset:node_bl_coord_img_name_lat+lat_offset)
                     << '_' << ew << (negative_lng?node_bl_coord_img_name_lng-lng_offset:node_bl_coord_img_name_lng+lng_offset)
-                    << "_1arc_v2.tif";
+                    << "_" << img_suffix << ".tif";
             TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
+            bool close_img = true;
             if (tif != NULL) {
                 begin_node_lat = node_detail_offset_lat - lat_offset;
                 end_node_lat = begin_node_lat + node_span.x;
-                delta_node_lat = (end_node_lat - begin_node_lat) / (dinmension-1);
+                delta_node_lat = (end_node_lat - begin_node_lat) / (node_dinmension-1);
                 begin_node_lng = node_detail_offset_lng - lng_offset;
                 end_node_lng = begin_node_lng + node_span.y;
-                delta_node_lng = (end_node_lng - begin_node_lng) / (dinmension-1);
+                delta_node_lng = (end_node_lng - begin_node_lng) / (node_dinmension-1);
                 min_lat = begin_node_lat + lat_offset + delta_node_lat/2;
                 max_lat = min_lat + std::min(node_span.x, 1.0f);
                 if (lat_offset==0) min_lat -= delta_node_lat;
@@ -162,16 +181,18 @@ void QTProfile::readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span) {
                 min_lat = begin_node_lat + std::ceil((min_lat-begin_node_lat)/delta_node_lat) * delta_node_lat;
                 min_lng = begin_node_lng + std::ceil((min_lng-begin_node_lng)/delta_node_lng) * delta_node_lng;
             } else {
-                ss.str("");
-                ss << "assets/def_dem.tif";
-                tif = TIFFOpen(ss.str().c_str(), "r");
+                if (strcmp(img_suffix, "dem") == 0) {
+                    tif = def_dem;
+                } else if (strcmp(img_suffix, "img") == 0) {
+                    tif = def_img;
+                }
                 if (tif != NULL) {
                     begin_node_lat = (90.0 + node_bl_coord.x) / 180.0;
                     end_node_lat = begin_node_lat + node_span.x/180.0;
-                    delta_node_lat = (end_node_lat - begin_node_lat) / (dinmension-1);
+                    delta_node_lat = (end_node_lat - begin_node_lat) / (node_dinmension-1);
                     begin_node_lng = (180.0 + node_bl_coord.y) / 360.0;
                     end_node_lng = begin_node_lng + node_span.y/360.0;
-                    delta_node_lng = (end_node_lng - begin_node_lng) / (dinmension-1);
+                    delta_node_lng = (end_node_lng - begin_node_lng) / (node_dinmension-1);
                     min_lat = begin_node_lat + lat_offset/180.0 + delta_node_lat/2;
                     max_lat = min_lat + std::min(node_span.x, 1.0f)/180.0;
                     if (lat_offset==0) min_lat -= delta_node_lat;
@@ -183,6 +204,7 @@ void QTProfile::readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span) {
                 } else {
                     return;
                 }
+                close_img = false;
             }
             if (tif != NULL) {
                 // dem file dinmension should have 1 more pixel
@@ -191,27 +213,39 @@ void QTProfile::readDEMFromTif(glm::vec2 node_bl_coord, glm::vec2 node_span) {
                 TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
                 image_w--;
                 image_h--;
-                short* buf = (short*)_TIFFmalloc(TIFFStripSize(tif));
-                for(double i=min_lat; i<max_lat; i+=delta_node_lat) {
-                    int write_index_lat = node_base_index + (int)std::round((end_node_lat-i)/delta_node_lat) * dinmension;
-                    TIFFReadEncodedStrip(tif, (int)std::round((1.0-i) * image_h), buf, TIFFStripSize(tif));
-                    for(double j=min_lng; j<max_lng; j+=delta_node_lng) {
-                        int write_index_lng = write_index_lat + (int)std::round((j-begin_node_lng)/delta_node_lng);
-                        double elevation_factor = ((double)(short)buf[(int)std::round(j * image_w)])/elevation_divisor + 1.0f;
-                        elevationOffset(&result[write_index_lng], elevation_factor);
+                if (strcmp(img_suffix, "dem") == 0) {
+                    short* buf_dem = (short*)buf;
+                    for(double i=min_lat; i<max_lat; i+=delta_node_lat) {
+                        int write_index_lat = data_base_index + (int)std::round((end_node_lat-i)/delta_node_lat) * dinmension;
+                        TIFFReadEncodedStrip(tif, std::max(0, (int)std::round((1.0-i) * image_h)), buf_dem, TIFFStripSize(tif));
+                        for(double j=min_lng; j<max_lng; j+=delta_node_lng) {
+                            int write_index_lng = write_index_lat + (int)std::round((j-begin_node_lng)/delta_node_lng);
+                            double elevation_factor = ((double)(short)buf_dem[(int)std::round(j * image_w)])/elevation_divisor + 1.0f;
+                            elevationOffset(&result[write_index_lng], elevation_factor);
+                        }
                     }
+                    if (close_img) TIFFClose(tif);
+                } else if (strcmp(img_suffix, "img") == 0) {
+                    uint32* buf_img = (uint32*)buf;
+                    for(double i=min_lat; i<max_lat; i+=delta_node_lat) {
+                        int write_index_lat = data_base_index + (int)std::round((i-begin_node_lat)/delta_node_lat) * texture_unit_size * texture_unit_dinmension;
+                        TIFFReadRGBAStrip(tif, std::max(0, (int)std::round((1.0-i) * image_h)), buf_img);
+                        for(double j=min_lng; j<max_lng; j+=delta_node_lng) {
+                            int write_index_lng = write_index_lat + (int)std::round((j-begin_node_lng)/delta_node_lng);
+                            uint32 color = buf_img[(int)std::round(j * image_w)];
+                            texture[write_index_lng] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
+                        }
+                    }
+                    if (close_img) TIFFClose(tif);
                 }
-                _TIFFfree(buf);
-                TIFFClose(tif);
             }
         }
     }
 }
 
-void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, Node** node) {
+bool QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv) {
     if (nodeIndex >= maxNodes) {
-        *node = NULL;
-        return;
+        return false;
     }
     int baseIndex = vertex_index_offset + nodeIndex * dinmension * dinmension;
     glm::dvec2 bl_coord_arc = glm::dvec2((double)bl_coord.x/180*pi, (double)bl_coord.y/180*pi);
@@ -232,8 +266,9 @@ void QTProfile::addNodeToResult(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec
     result[baseIndex + dinmension * (dinmension - 1)] = bl_pos;
     result_uv[baseIndex + dinmension * (dinmension - 1)] = bl_uv;
 
-    readDEMFromTif(bl_coord, glm::vec2(tr_coord.x-bl_coord.x, tr_coord.y-bl_coord.y));
+    readDATAFromIMG(bl_coord, glm::vec2(tr_coord.x-bl_coord.x, tr_coord.y-bl_coord.y), vertex_index_offset + nodeIndex * dinmension * dinmension, "dem");
     nodeIndex++;
+    return true;
 }
 
 float QTProfile::calResultNormalwithRoughness(int ele_index, int offset_a, int offset_b, bool add_roughness) {
@@ -297,150 +332,6 @@ float QTProfile::genNodeElementNormalwithRoughness(int idx) {
     return roughness;
 }
 
-bool QTProfile::getImageFromCoords(TIFF** tif, glm::vec2* image_bl_coord, float* span_image_coord, glm::vec2 bl_coord, glm::vec2 tr_coord) {
-    std::stringstream ss;
-    float coord_span = tr_coord.x - bl_coord.x;
-    float coord_span_lod = 1.0f/lod_max;
-    while(coord_span > coord_span_lod) {
-        coord_span_lod *= 2.0f;
-    }
-    glm::vec2 bl_coord_int = glm::vec2((float)(int)bl_coord.x, (float)(int)bl_coord.y);
-    if(bl_coord_int.x < 0.0f)bl_coord_int.x -= 1.0f;
-    if(bl_coord_int.y < 0.0f)bl_coord_int.y -= 1.0f;
-    *tif = NULL;
-    glm::vec2 bl_coord_image;
-    while(*tif == NULL && coord_span_lod <= 1.0f) {
-        bl_coord_image = bl_coord_int;
-        while(bl_coord_image.x>bl_coord.x || bl_coord_image.x+coord_span_lod<tr_coord.x) {
-            bl_coord_image.x += coord_span_lod;
-        }
-        while(bl_coord_image.y>bl_coord.y || bl_coord_image.y+coord_span_lod<tr_coord.y) {
-            bl_coord_image.y += coord_span_lod;
-        }
-        ss.str("");
-        if(coord_span_lod == 1.0f) {
-            ss << "assets/"
-                    << (bl_coord_image.x<0.0f ? 's' : 'n') << glm::abs(bl_coord_image.x) << '_'
-                    << (bl_coord_image.y<0.0f ? 'w' : 'e') << glm::abs(bl_coord_image.y) << "_img.tif";;
-        } else {
-            glm::vec2 tr_coord_index = glm::vec2(bl_coord_image.x+coord_span_lod, bl_coord_image.y+coord_span_lod);
-            ss << "assets/"
-                    << (bl_coord_image.x<0.0f ? 's' : 'n') << glm::abs(bl_coord_image.x) << '_'
-                    << (bl_coord_image.y<0.0f ? 'w' : 'e') << glm::abs(bl_coord_image.y) << '~'
-                    << (tr_coord_index.x<0.0f ? 's' : 'n') << glm::abs(tr_coord_index.x) << '_'
-                    << (tr_coord_index.y<0.0f ? 'w' : 'e') << glm::abs(tr_coord_index.y) << "_img.tif";
-        }
-        *tif = TIFFOpen(ss.str().c_str(), "r");
-        if(*tif == NULL)coord_span_lod *= 2.0f;
-    }
-    if(*tif != NULL)*image_bl_coord = bl_coord_image;
-    *span_image_coord = coord_span_lod;
-    return *tif != NULL;
-}
-
-bool QTProfile::readImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord, int scale_x, int scale_y, int base_index_unit) {
-    bool created = false;
-    std::stringstream ss;
-    ss << std::setprecision(std::numeric_limits<float>::digits10+1);
-    char ns = bl_coord.x<0.0f ? 's' : 'n';
-    char ew = bl_coord.y<0.0f ? 'w' : 'e';
-    bool detailed = tr_coord.x - bl_coord.x < 1.0f;
-    TIFF *tif;
-    if (!detailed) {
-        ss << "assets/"
-                << ns << glm::abs(bl_coord.x) << '_' << ew << glm::abs(bl_coord.y) << "_img.tif";
-        tif = TIFFOpen(ss.str().c_str(), "r");
-        if (tif != NULL) {
-            created = true;
-            uint32 image_w, image_h;
-            TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
-            TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
-            float scale_lat = image_h/(texture_unit_size/(float)scale_y);
-            float scale_lng = image_w/(texture_unit_size/(float)scale_x);
-            uint32* buf = (uint32*)_TIFFmalloc(image_w * sizeof(uint32));
-            for (float strip=image_h-1; strip>=0.0f; strip-=scale_lat) {
-                TIFFReadRGBAStrip(tif, (int)strip, buf);
-                int row_index = 0;
-                for (float i=0; i<image_w; i+=scale_lng) {
-                    uint32 color = buf[(int)i];
-                    texture[base_index_unit + row_index] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
-                    row_index++;
-                }
-                base_index_unit += texture_unit_size * texture_unit_dinmension;
-            }
-            _TIFFfree(buf);
-            TIFFClose(tif);
-        }
-    } else {
-        glm::vec2 mid_coord = (bl_coord+tr_coord)/2.0f;
-        int bl_image_lat = (int)mid_coord.x;
-        int bl_image_lng = glm::abs(((int)mid_coord.y)-1);
-        ss.str("");
-        glm::vec2 image_bl_coord;
-        float span_image_coord;
-        if(getImageFromCoords(&tif, &image_bl_coord, &span_image_coord, bl_coord, tr_coord)) {
-            uint32 image_w, image_h;
-            TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_w);
-            TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_h);
-            float image_usage_percent = (tr_coord.x-bl_coord.x)/span_image_coord;
-            if(image_usage_percent*image_h*1.5f > texture_unit_size || image_usage_percent*image_w*1.5f > texture_unit_size) {
-                created = true;
-                uint32* buf = (uint32*)_TIFFmalloc(image_w * sizeof(uint32));
-                float scale_lat = image_h*image_usage_percent/texture_unit_size;
-                float scale_lng = image_w*image_usage_percent/texture_unit_size;
-                float offset_lat = (span_image_coord-(bl_coord.x-image_bl_coord.x))/span_image_coord*image_h;
-                float offset_lng = (bl_coord.y-image_bl_coord.y)/span_image_coord*image_w;
-                for (int i=0; i<texture_unit_size; i++) {
-                    TIFFReadRGBAStrip(tif, (int)offset_lat, buf);
-                    offset_lat -= scale_lat;
-                    float offset = offset_lng;
-                    for (int j=0; j<texture_unit_size; j++) {
-                        uint32 color = buf[(int)offset];
-                        offset += scale_lng;
-                        texture[base_index_unit + j] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
-                    }
-                    base_index_unit += texture_unit_size * texture_unit_dinmension;
-                }
-                _TIFFfree(buf);
-            }
-            TIFFClose(tif);
-        }
-    }
-    return created;
-}
-
-bool QTProfile::readGlobalImageToTexture(glm::vec2 bl_coord, glm::vec2 tr_coord) {
-    std::stringstream ss;
-    ss << "assets/def_img.tif";
-    TIFF *tif = TIFFOpen(ss.str().c_str(), "r");
-    if (tif != NULL) {
-        int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension
-                + texture_unit_index % texture_unit_dinmension * texture_unit_size;
-        uint32 imageW, imageH;
-        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &imageW);
-        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &imageH);
-        float scale_lat = (tr_coord.x-bl_coord.x)/180.0f*imageH/texture_unit_size;
-        float scale_lng = (tr_coord.y-bl_coord.y)/360.0f*imageW/texture_unit_size;
-        int begin_index_img_lat = (int)((90.0f-bl_coord.x)/180.0f*imageH);
-        int begin_index_img_lng = (int)((bl_coord.y+180.0f)/360.0f*imageW);
-        uint32* buf = (uint32*)_TIFFmalloc(imageW * sizeof(uint32));
-        float strip = begin_index_img_lat;
-        for (int i=0; i<texture_unit_size; i++) {
-            TIFFReadRGBAStrip(tif, (int)strip, buf);
-            strip -= scale_lat;
-            float strip_index = begin_index_img_lng;
-            for (int j=0; j<texture_unit_size; j++) {
-                uint32 color = buf[(int)strip_index];
-                strip_index += scale_lng;
-                texture[base_index_unit + j] = color<<24&0xff000000 | color<<8&0xff0000 | color>>8&0xff00 | color>>24&0xff;
-            }
-            base_index_unit += texture_unit_size * texture_unit_dinmension;
-        }
-        _TIFFfree(buf);
-        TIFFClose(tif);
-    }
-}
-
 glm::vec2 QTProfile::getNewUv() {
     float delta = 1.0f/(float)texture_unit_dinmension;
     glm::vec2 new_texture_unit_uv_base = glm::vec2(texture_unit_index%texture_unit_dinmension*delta, texture_unit_index/texture_unit_dinmension*delta);
@@ -448,39 +339,23 @@ glm::vec2 QTProfile::getNewUv() {
     return new_texture_unit_uv_base;
 }
 
-glm::vec2 QTProfile::new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord, bool detailed) {
+int QTProfile::getTextureIndex() {
+    return (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
+        texture_unit_index % texture_unit_dinmension * texture_unit_size;
+}
+
+glm::vec2 QTProfile::new_texture_unit(glm::vec2 bl_coord, glm::vec2 tr_coord) {
     if (texture_unit_index >= terrain_texture_units) {
         texture_unit_index--;
-    } else if (!detailed) {
-        readGlobalImageToTexture(bl_coord, tr_coord);
-        int bl_coord_x_int = (int)bl_coord.x;
-        int tr_coord_x_int = (int)tr_coord.x;
-        int bl_coord_y_int = (int)bl_coord.y;
-        int tr_coord_y_int = (int)tr_coord.y;
-        int scale_y = tr_coord_x_int - bl_coord_x_int;
-        int scale_x = tr_coord_y_int - bl_coord_y_int;
-        for (int i=bl_coord_y_int; i<tr_coord_y_int; i++) {
-            for (int j=bl_coord_x_int; j<tr_coord_x_int; j++) {
-                int base_index_unit =
-                        (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
-                        texture_unit_index % texture_unit_dinmension * texture_unit_size +
-                        (int)((j - bl_coord_x_int) * ((float)texture_unit_size/scale_y)) * texture_unit_size * texture_unit_dinmension +
-                        (int)((i - bl_coord_y_int) * ((float)texture_unit_size/scale_x));
-                readImageToTexture(glm::vec2(j, i), glm::vec2(j+1, i+1), scale_x, scale_y, base_index_unit);
-            }
-        }
     } else {
-        int base_index_unit = (texture_unit_index / texture_unit_dinmension) * texture_unit_size * texture_unit_size * texture_unit_dinmension +
-                texture_unit_index % texture_unit_dinmension * texture_unit_size;
-        if (!readImageToTexture(bl_coord, tr_coord, 1, 1, base_index_unit)) {
-            return glm::vec2(-10.0f, -10.0f);
-        }
+        readDATAFromIMG(bl_coord, glm::vec2(tr_coord.x-bl_coord.x, tr_coord.y-bl_coord.y), getTextureIndex(), "img");
     }
     return getNewUv();
 }
 
 void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_uv, glm::vec2 tr_uv, int level, Node** node, glm::vec3* viewing_pos) {
     if (tr_coord.x-bl_coord.x==0 || tr_coord.y-bl_coord.y==0) {
+        delete *node;
         *node = NULL;
         return;
     }
@@ -506,7 +381,11 @@ void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_
     glm::vec3 tr_pos = calcFPosFromCoord(tr_coord.x, tr_coord.y);
     float one_degree_lng_length = glm::length(calcFPosFromCoord(mid_coord.x, 0.0f) - calcFPosFromCoord(mid_coord.x, 1.0f));
     float node_size = sqrt(pow((*node)->node_size_lat*one_degree_lat_length, 2) + pow((*node)->node_size_lng*one_degree_lng_length, 2));
-    addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv, node);
+    if (!addNodeToResult(bl_coord, tr_coord, bl_uv, tr_uv)) {
+        delete *node;
+        *node = NULL;
+        return;
+    }
     // leave this var for future use
     float roughness = genNodeElementNormalwithRoughness(nodeIndex-1);
     if (node_size < minNodeSize) {
@@ -531,8 +410,7 @@ void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_
 
         if (texture_unit_index < terrain_texture_units) {//TODO: Height map size def
             float delta_coord = tr_coord.x-bl_coord.x;
-            bool detailed = delta_coord < 1.0f;
-            glm::vec2 temp_bl_uv = new_texture_unit(bl_coord, tr_coord, detailed);
+            glm::vec2 temp_bl_uv = new_texture_unit(bl_coord, tr_coord);
             if (temp_bl_uv.x != -10.0f) {
                 bl_uv = temp_bl_uv;
                 tr_uv = bl_uv + glm::vec2(1.0f/(float)texture_unit_dinmension, 1.0f/(float)texture_unit_dinmension);
@@ -582,7 +460,7 @@ void QTProfile::createQuardTree(
     float delta = 1.0f/(float)texture_unit_dinmension;
     glm::vec2 delta_coord = glm::vec2(delta, delta);
     if(tr_coord.y > bl_coord.y) {
-        readGlobalImageToTexture(bl_coord, tr_coord);
+        readDATAFromIMG(bl_coord, glm::vec2(tr_coord.x-bl_coord.x, tr_coord.y-bl_coord.y), getTextureIndex(), "img");
         texture_unit_index++;
         selectNode(bl_coord, tr_coord, glm::vec2(0.0f, 0.0f), delta_coord, 0, new_node, viewing_pos);
     } else {
@@ -594,10 +472,10 @@ void QTProfile::createQuardTree(
         (*new_node)->tr = NULL;
         glm::vec2 tr_coord_mid = glm::vec2(tr_coord.x, 180.0f);
         glm::vec2 bl_coord_mid = glm::vec2(bl_coord.x, -180.0f);
-        readGlobalImageToTexture(bl_coord, tr_coord_mid);
+        readDATAFromIMG(bl_coord, glm::vec2(tr_coord_mid.x-bl_coord.x, tr_coord_mid.y-bl_coord.y), getTextureIndex(), "img");
         glm::vec2 uv0 = getNewUv();
         selectNode(bl_coord, tr_coord_mid, uv0, uv0+delta_coord, 0, &((*new_node)->br), viewing_pos);
-        readGlobalImageToTexture(bl_coord_mid, tr_coord);
+        readDATAFromIMG(bl_coord_mid, glm::vec2(tr_coord.x-bl_coord_mid.x, tr_coord.y-bl_coord_mid.y), getTextureIndex(), "img");
         glm::vec2 uv1 = getNewUv();
         selectNode(bl_coord_mid, tr_coord, uv1, uv1+delta_coord, 0, &((*new_node)->bl), viewing_pos);
     }
