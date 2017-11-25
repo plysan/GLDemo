@@ -230,8 +230,9 @@ int main( void )
     qt_terrain.vertex_offset = setPosCoord(20.0f, -156.0f, 0.7f);
     viewObj = new Object();
     updateSkydomeConf(64, 512);
-    int vertex_buffer_length = qt_terrain.quardtree_pos_length + getSkydomePosLength();
+    int vertex_buffer_length = getSpaceCubePosLength() + qt_terrain.quardtree_pos_length + getSkydomePosLength();
     int element_buffer_length = qt_terrain.quardtree_element_index_length + getSkydomePosLength();
+    int uv_buffer_length = getSpaceCubePosLength() + qt_terrain.quardtree_uv_length + getSkydomePosLength();
     viewObj->using_vertex_offset = qt_terrain.vertex_offset;
     vertex_offset_snap = viewObj->using_vertex_offset;
 
@@ -299,7 +300,7 @@ int main( void )
     g_vertex_buffer_data = new glm::vec3*[2];
     g_vertex_buffer_data[0] = new glm::vec3[vertex_buffer_length];
     g_vertex_buffer_data[1] = new glm::vec3[vertex_buffer_length];
-    glm::vec2* g_vertex_uv_data = new glm::vec2[qt_terrain.quardtree_uv_length];
+    glm::vec2* g_vertex_uv_data = new glm::vec2[uv_buffer_length];
     createSpaceCube(g_vertex_buffer_data[0], &vertex_static_data_length, g_vertex_uv_data);
     std::copy(&g_vertex_buffer_data[0][0], &g_vertex_buffer_data[0][vertex_static_data_length], g_vertex_buffer_data[1]);
 
@@ -315,13 +316,13 @@ int main( void )
 
     glGenBuffers(2, uvbuffer);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, g_vertex_uv_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*uv_buffer_length, g_vertex_uv_data, GL_STREAM_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, g_vertex_uv_data, GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*uv_buffer_length, g_vertex_uv_data, GL_STREAM_DRAW);
     delete[] g_vertex_uv_data;
     glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
     g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(
-        GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+        GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*uv_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
     glGenBuffers(2, normalbuffer);
     glm::vec3* g_vertex_normal_data = new glm::vec3[qt_terrain.quardtree_normal_length];
@@ -393,9 +394,9 @@ int main( void )
                 throw std::runtime_error("Failed to map buffer.");
             }
             glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[renderingBufferIndex]);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, NULL, GL_STREAM_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*uv_buffer_length, NULL, GL_STREAM_DRAW);
             g_mapped_vertex_uv_data = (glm::vec2*)(glMapBufferRange(
-                GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*qt_terrain.quardtree_uv_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
+                GL_ARRAY_BUFFER, 0, sizeof(glm::vec2)*uv_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
             glBindBuffer(GL_ARRAY_BUFFER, normalbuffer[renderingBufferIndex]);
             glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*qt_terrain.quardtree_normal_length, NULL, GL_STREAM_DRAW);
             g_mapped_vertex_normal_data = (glm::vec3*)(glMapBufferRange(
