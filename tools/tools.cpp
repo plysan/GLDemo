@@ -22,6 +22,10 @@ glm::vec3 calcFPosFromCoord(float lat, float lng) {
             );
 }
 
+glm::vec3 calcFPosFromCoord(float lat, float lng, float height) {
+    return calcFPosFromCoord(lat, lng) * (height+earth_radius)/earth_radius;
+}
+
 glm::vec2 calcCoordFromPos(glm::vec3 pos) {
     float radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
     float lat = atan(pos.y/radius_xz)/pi*180.0f;
