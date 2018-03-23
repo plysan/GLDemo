@@ -22,7 +22,8 @@
 #include "vars.hpp"
 #include "tools.hpp"
 
-extern glm::vec3 vertex_offset_diff;
+//TODO tools should not access directly
+extern glm::vec3 dbuf_view_offset;
 
 QTProfile::QTProfile(
         int dinmension,
@@ -391,7 +392,7 @@ void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_
     if (node_size < minNodeSize) {
         return;
     }
-    glm::vec3 viewer_pos = vertex_offset - vertex_offset_diff + *viewing_pos;
+    glm::vec3 viewer_pos = vertex_offset - dbuf_view_offset + *viewing_pos;
     float view_node_mid_distance = glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - viewer_pos);
     float view_height_sealevel = glm::abs(glm::length(viewer_pos) - earth_radius) + 0.5f; // less sensitive to lod change near sealevel
     float view_node_mid_distance_horizontal = sqrt(glm::max(pow(view_node_mid_distance, 2) - pow(view_height_sealevel, 2), 0.0));

@@ -1,5 +1,6 @@
 #ifndef QUARDTREETERRAIN_HPP
 #define QUARDTREETERRAIN_HPP
+#include <glm/glm.hpp>
 #include <tiffio.h>
 
 struct Node {

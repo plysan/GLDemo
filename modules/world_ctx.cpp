@@ -11,11 +11,6 @@
 #include "../tools/tools.hpp"
 #include "../tools/vars.hpp"
 
-// used to store vertex offset of the updating buffer and update to physics in the next buffer update
-glm::vec3 vertex_offset_snap;
-// offset of view position since last quardtree generation
-glm::vec3 vertex_offset_diff;
-
 QTProfile qt_terrain (
     33,     // dinmension
     1000,   // maxNodes
@@ -24,8 +19,6 @@ QTProfile qt_terrain (
     128,    // texture_unit_size
     16,     // texture_unit_dinmension
     4);     // lod_max
-
-Object* viewObj;
 
 Node* new_node = NULL;
 Node* node_to_del = NULL;
@@ -48,9 +41,6 @@ int elemant_index_sky_length_rendering = 0;
 int vertex_static_data_length = 0;
 int element_static_data_length = 0;
 
-int terrain_texture_unit_id = 0;
-int scatter_texture_unit_id = 1;
-int spacecube_texture_unit_id = 2;
 int vertex_buffer_length = -1;
 int element_buffer_length = -1;
 int uv_buffer_length = -1;
@@ -62,81 +52,69 @@ GLuint matrix_notrans_VP_ID = -1;
 GLuint sun_worldspace_uniform_id = -1;
 GLuint vertex_offset_uniform_id = -1;
 GLuint scatter_height_uniform_id = -1;
-GLuint render_target_uniform_id = -1;
 
 int renderingBufferIndex = 0;
 
 int update_frame_interval = 5;
 
-void updateData(bool loop)
-{
-    do {
-        std::this_thread::sleep_for (std::chrono::seconds(1));
-        if (terminating) {
-            terminating = false;
-            return;
-        }
-        if (!updating) {
-            continue;
-        }
-        int vertex_pointer = vertex_static_data_length;
-        int element_pointer = element_static_data_length;
-        int element_pointer_old = element_pointer;
-        clock_t before = clock();
-        vertex_offset_diff = viewObj->position;
-        qt_terrain.vertex_offset += vertex_offset_diff;
-        vertex_offset_snap = qt_terrain.vertex_offset;
-        new_node = new Node;
-        qt_terrain.cleanupNode(&node_to_del);
-        glm::vec2 center_coord = calcCoordFromPos(qt_terrain.vertex_offset);
-        float height_core = glm::length(qt_terrain.vertex_offset);
-        float coord_span = std::asin(std::sqrt(std::pow(height_core, 2)-std::pow(earth_radius, 2)) / height_core) * 180.0 / pi;
-        float coord_span_int = (int)coord_span + 4.0f;
-        float lng_left_span = (int)(center_coord.y)-coord_span_int;
-        if(lng_left_span < -180.0f)lng_left_span = 360.0f + lng_left_span;
-        float lng_right_span = (int)(center_coord.y)+coord_span_int;
-        if(lng_right_span > 180.0f)lng_right_span = lng_right_span - 360.0f;
-        glm::vec2 bl_boundary = glm::vec2(
-            glm::min(89.0f, glm::max(-89.0f, (int)(center_coord.x)-coord_span_int)),
-            lng_left_span);
-        glm::vec2 tr_boundary = glm::vec2(
-            glm::min(89.0f, glm::max(-89.0f, (int)(center_coord.x)+coord_span_int)),
-            lng_right_span);
-        qt_terrain.createQuardTree(
-            bl_boundary,
-            tr_boundary,
-            &vertex_pointer,
-            g_vertex_buffer_data[renderingBufferIndex],
-            g_mapped_vertex_uv_data,
-            g_mapped_vertex_normal_data,
-            &element_pointer,
-            g_mapped_vertex_element_data,
-            g_mapped_terrain_texture_array_data,
-            &new_node,
-            &(viewObj->position));
-        elemant_index_terrain_length_update = element_pointer - element_pointer_old;
-        element_pointer_old = element_pointer;
-        createSkydome(
-            g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
-            g_mapped_vertex_element_data, &element_pointer,
-            g_mapped_vertex_uv_data,
-            calcCoordFromPos(qt_terrain.vertex_offset), 64, 1.5, 512, qt_terrain.vertex_offset);
-        elemant_index_sky_length_update = element_pointer - element_pointer_old;
-        printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
-        printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n",
-            vertex_pointer,
-            element_pointer,
-            qt_terrain.nodeIndex,
-            qt_terrain.texture_unit_index);
+void update_data() {
+    int vertex_pointer = vertex_static_data_length;
+    int element_pointer = element_static_data_length;
+    int element_pointer_old = element_pointer;
+    clock_t before = clock();
+    dbuf_view_offset = viewObj->position;
+    qt_terrain.vertex_offset += dbuf_view_offset;
+    dbuf_world_offset = qt_terrain.vertex_offset;
+    new_node = new Node;
+    qt_terrain.cleanupNode(&node_to_del);
+    glm::vec2 center_coord = calcCoordFromPos(qt_terrain.vertex_offset);
+    float height_core = glm::length(qt_terrain.vertex_offset);
+    float coord_span = std::asin(std::sqrt(std::pow(height_core, 2)-std::pow(earth_radius, 2)) / height_core) * 180.0 / pi;
+    float coord_span_int = (int)coord_span + 4.0f;
+    float lng_left_span = (int)(center_coord.y)-coord_span_int;
+    if(lng_left_span < -180.0f)lng_left_span = 360.0f + lng_left_span;
+    float lng_right_span = (int)(center_coord.y)+coord_span_int;
+    if(lng_right_span > 180.0f)lng_right_span = lng_right_span - 360.0f;
+    glm::vec2 bl_boundary = glm::vec2(
+        glm::min(89.0f, glm::max(-89.0f, (int)(center_coord.x)-coord_span_int)),
+        lng_left_span);
+    glm::vec2 tr_boundary = glm::vec2(
+        glm::min(89.0f, glm::max(-89.0f, (int)(center_coord.x)+coord_span_int)),
+        lng_right_span);
+    qt_terrain.createQuardTree(
+        bl_boundary,
+        tr_boundary,
+        &vertex_pointer,
+        g_vertex_buffer_data[renderingBufferIndex],
+        g_mapped_vertex_uv_data,
+        g_mapped_vertex_normal_data,
+        &element_pointer,
+        g_mapped_vertex_element_data,
+        g_mapped_terrain_texture_array_data,
+        &new_node,
+        &(viewObj->position));
+    elemant_index_terrain_length_update = element_pointer - element_pointer_old;
+    element_pointer_old = element_pointer;
+    createSkydome(
+        g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
+        g_mapped_vertex_element_data, &element_pointer,
+        g_mapped_vertex_uv_data,
+        calcCoordFromPos(qt_terrain.vertex_offset), 64, 1.5, 512, qt_terrain.vertex_offset);
+    elemant_index_sky_length_update = element_pointer - element_pointer_old;
+    printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
+    printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n",
+        vertex_pointer,
+        element_pointer,
+        qt_terrain.nodeIndex,
+        qt_terrain.texture_unit_index);
 
-        std::copy(
-            &g_vertex_buffer_data[renderingBufferIndex][vertex_static_data_length],
-            &g_vertex_buffer_data[renderingBufferIndex][vertex_pointer],
-            &g_mapped_vertex_buffer_data[vertex_static_data_length]);
+    std::copy(
+        &g_vertex_buffer_data[renderingBufferIndex][vertex_static_data_length],
+        &g_vertex_buffer_data[renderingBufferIndex][vertex_pointer],
+        &g_mapped_vertex_buffer_data[vertex_static_data_length]);
 
-        unmapping = true;
-        updating = false;
-    } while (loop);
+    unmapping = true;
+    updating = false;
 }
 
 GLuint pixelBuffer;
@@ -160,6 +138,19 @@ void unmapBuffers() {
     unmapping = false;
 }
 
+void thread_world_update_data() {
+    while(true) {
+        std::this_thread::sleep_for (std::chrono::seconds(1));
+        if (terminating) {
+            terminating = false;
+            return;
+        }
+        if (!updating) {
+            continue;
+        }
+        update_data();
+    }
+}
 
 void world_pre_loop() {
     int scatter_texture_size = scatter_texture_3d_size*scatter_texture_4thd_in_3d_size;
@@ -170,7 +161,7 @@ void world_pre_loop() {
     glBindVertexArray(VertexArrayID);
 
     // Create and compile our GLSL program from the shaders
-    GLuint programID = LoadShaders("tools/VertexShader", "tools/FragmentShader", "tools/vars.hpp");
+    programID = LoadShaders("tools/VertexShader", "tools/FragmentShader", "tools/vars.hpp");
     glUseProgram(programID);
     matrixMVPID = glGetUniformLocation( programID, "MVP" );
     matrixMID = glGetUniformLocation( programID, "M" );
@@ -181,14 +172,13 @@ void world_pre_loop() {
     scatter_height_uniform_id = glGetUniformLocation(programID, "scatter_height");
     render_target_uniform_id = glGetUniformLocation(programID, "render_target");
 
-    qt_terrain.vertex_offset = calcFPosFromCoord(20.0f, -156.0f, 0.7f);
-    viewObj = new Object();
+    qt_terrain.vertex_offset = initial_pos;
     updateSkydomeConf(64, 512);
     vertex_buffer_length = getSpaceCubePosLength() + qt_terrain.quardtree_pos_length + getSkydomePosLength();
     element_buffer_length = qt_terrain.quardtree_element_index_length + getSkydomePosLength();
     uv_buffer_length = getSpaceCubePosLength() + qt_terrain.quardtree_uv_length + getSkydomePosLength();
     viewObj->using_vertex_offset = qt_terrain.vertex_offset;
-    vertex_offset_snap = viewObj->using_vertex_offset;
+    dbuf_world_offset = viewObj->using_vertex_offset;
 
     glm::detail::uint32* g_terrain_texture_array_data = new glm::detail::uint32[(int)pow(qt_terrain.terrain_texture_size, 2)];
     glActiveTexture(GL_TEXTURE0 + terrain_texture_unit_id);
@@ -246,7 +236,6 @@ void world_pre_loop() {
     GLuint spacecube_texure_uniform_id  = glGetUniformLocation(programID, "spacecube_texture_sampler");
     glUniform1i(spacecube_texure_uniform_id, spacecube_texture_unit_id);
 
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
 
     g_vertex_buffer_data = new glm::vec3*[2];
     g_vertex_buffer_data[0] = new glm::vec3[vertex_buffer_length];
@@ -302,11 +291,8 @@ void world_pre_loop() {
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
 
-    updateData(false);
+    update_data();
     unmapBuffers();
-
-    std::thread first (updateData, true);
-    first.detach();
 }
 
 void world_loop() {
@@ -320,6 +306,7 @@ void world_loop() {
         glVertexAttribPointer( 2, 3, GL_FLOAT, GL_FALSE, 0,(void*)0 );
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer[renderingBufferIndex]);
         glActiveTexture(GL_TEXTURE0 + terrain_texture_unit_id);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
         glTexSubImage2D(
             GL_TEXTURE_2D, 0, 0, 0, qt_terrain.terrain_texture_size, qt_terrain.terrain_texture_size,
             GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
@@ -327,9 +314,9 @@ void world_loop() {
         //update vars
         elemant_index_terrain_length_rendering = elemant_index_terrain_length_update;
         elemant_index_sky_length_rendering = elemant_index_sky_length_update;
-        viewObj->position = viewObj->position - vertex_offset_diff;
+        viewObj->position = viewObj->position - dbuf_view_offset;
         viewObj->using_vertex = g_vertex_buffer_data[renderingBufferIndex];
-        viewObj->using_vertex_offset = vertex_offset_snap;
+        viewObj->using_vertex_offset = dbuf_world_offset;
         node_to_del = qt_terrain.node;
         qt_terrain.node = new_node;
         renderingBufferIndex = (renderingBufferIndex+1)%2;
@@ -357,6 +344,7 @@ void world_loop() {
         g_mapped_vertex_element_data = (unsigned int*)(glMapBufferRange(
             GL_ARRAY_BUFFER, 0, sizeof(unsigned int)*element_buffer_length, GL_MAP_WRITE_BIT|GL_MAP_UNSYNCHRONIZED_BIT));
 
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBuffer);
         glBufferData(
             GL_PIXEL_UNPACK_BUFFER, sizeof(glm::detail::uint32)*pow(qt_terrain.terrain_texture_size, 2), NULL, GL_STREAM_DRAW);
         g_mapped_terrain_texture_array_data = (glm::detail::uint32*)glMapBufferRange(

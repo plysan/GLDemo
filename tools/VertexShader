@@ -1,23 +1,35 @@
 layout(location = 0) in vec3 vertex_pos_ms;
 layout(location = 1) in vec2 vertex_uv_ms;
 layout(location = 2) in vec3 vertex_normal_ms;
+layout(location = 3) in vec3 vertex_water_ss;
+layout(location = 4) in vec3 vertex_water_uv_ss; //reserve
 
 out vec3 vertex_ws;
 out vec3 vertex_normal_cs;
 out vec3 vertex_origin_dir_cs;
 out vec3 vertex_sun_dir_cs;
 out vec2 uv;
+out vec2 water_uv;
 noperspective out vec4 scatter_rgba;
 
 uniform mat4 MVP;
 uniform mat4 M;
 uniform mat4 V;
+uniform mat4 inv_P;
 uniform mat4 notrans_VP;
+uniform mat4 inv_V;
+uniform vec3 cam_ms;
 uniform vec3 sun_ws;
 uniform vec3 vertex_offset_ws;
 uniform float scatter_height;
 uniform int render_target;
 uniform sampler3D scatter_texture_sampler;
+uniform sampler2D water_texture_sampler;
+uniform float water_ac;
+uniform float cam_height;
+uniform vec2 water_offset_uv;
+uniform vec2 coord_length;
+uniform vec2 water_origin_coord;
 
 float atmosphere_radius_square = atmosphere_top_radius * atmosphere_top_radius;
 float earth_radius_square = earth_radius * earth_radius;
@@ -60,7 +72,60 @@ vec4 texture4D(vec4 scatter_params)
     return result;
 }
 
-void main(){
+void main() {
+
+    if (render_target == 3) {
+        vec3 cam_vertex_dir_ms = normalize((inv_V * vec4((inv_P * vec4(vertex_water_ss, 1)).xyz, 0)).xyz);
+        vec3 cam_earthCenter_dir = -(cam_ms + vertex_offset_ws);
+        float cam_earthCenter_length = length(cam_earthCenter_dir);
+        vec3 cam_earthCenter_dir_n = normalize(cam_earthCenter_dir);
+        float earthCenter_cam_vertex_cos = dot(cam_earthCenter_dir_n, cam_vertex_dir_ms);
+        float b = 2 * cam_earthCenter_length * earthCenter_cam_vertex_cos;
+        float bb_4ac = pow(b, 2) - 4 * water_ac;
+        float cam_vertex_length;
+        vec3 surface_pos_ms;
+        if(bb_4ac < 0 || b < 0.0000001) {
+            gl_Position = MVP * vec4(cam_earthCenter_dir, 1);
+            return;
+        } else {
+            cam_vertex_length = (b - sqrt(bb_4ac)) / 2;
+            if (cam_vertex_length < 0.2) {
+                cam_vertex_length = cam_height / earthCenter_cam_vertex_cos;
+                surface_pos_ms = cam_ms + cam_vertex_dir_ms * cam_vertex_length;
+                vec3 north = vec3(0,1,0);
+                vec3 up = -cam_earthCenter_dir_n;
+                vec3 tangent_east_n = normalize(cross(north, up));
+                vec3 tangent_north_n = normalize(cross(up, tangent_east_n));
+                vec3 cam_surface_pos = cam_ms - cam_earthCenter_dir_n * cam_height;
+                vec3 cam_surface_vertex_dir = surface_pos_ms - cam_surface_pos;
+                float cam_surface_vertex_length = length(cam_surface_vertex_dir);
+                vec3 cam_surface_vertex_dir_n = normalize(cam_surface_vertex_dir);
+                float cam_surface_vertex_dir_east_cos = dot(tangent_east_n, cam_surface_vertex_dir_n);
+                float delta_lng = cam_surface_vertex_length * cam_surface_vertex_dir_east_cos / coord_length.y;
+                float cam_surface_vertex_dir_north_cos = dot(tangent_north_n, cam_surface_vertex_dir_n);
+                float delta_lat = cam_surface_vertex_length * cam_surface_vertex_dir_north_cos / coord_length.x;
+                water_uv = water_offset_uv + vec2(delta_lat, delta_lng);
+                gl_Position = MVP * vec4((surface_pos_ms - cam_earthCenter_dir_n * 0.0001 * texture(water_texture_sampler, water_uv).w), 1);
+                return;
+            }
+            surface_pos_ms = cam_ms + cam_vertex_dir_ms * cam_vertex_length;
+        }
+        vec3 surface_pos_earth = surface_pos_ms + vertex_offset_ws;
+        float radius_xz = sqrt(pow(surface_pos_earth.x, 2) + pow(surface_pos_earth.z, 2));
+        float lat = atan(surface_pos_earth.y/radius_xz);
+        float lng = -atan(surface_pos_earth.z/surface_pos_earth.x);
+        if (surface_pos_earth.x < 0.0f) {
+            if (lng < 0.0f) {
+                lng += pi;
+            } else {
+                lng -= pi;
+            }
+        }
+        water_uv = vec2(lat - water_origin_coord.x, lng - water_origin_coord.y) * water_uv_scale;
+        float water_height = texture(water_texture_sampler, water_uv).w;
+        gl_Position = MVP * vec4((surface_pos_ms - cam_earthCenter_dir_n * 0.0001 * water_height), 1);
+        return;
+    }
 
     uv = vertex_uv_ms;
 

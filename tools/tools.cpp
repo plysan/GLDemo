@@ -26,9 +26,9 @@ glm::vec3 calcFPosFromCoord(float lat, float lng, float height) {
     return calcFPosFromCoord(lat, lng) * (height+earth_radius)/earth_radius;
 }
 
-glm::vec2 calcCoordFromPos(glm::vec3 pos) {
+glm::vec2 calcRadCoordFromPos(glm::vec3 pos) {
     float radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
-    float lat = atan(pos.y/radius_xz)/pi*180.0f;
+    float lat = atan(pos.y/radius_xz);
     float lng = -atan(pos.z/pos.x);
     if (pos.x < 0.0f) {
         if (lng < 0.0f) {
@@ -37,8 +37,25 @@ glm::vec2 calcCoordFromPos(glm::vec3 pos) {
             lng -= pi;
         }
     }
-    lng = lng/pi*180.0f;
     return glm::vec2(lat, lng);
+}
+
+glm::vec2 calcCoordFromPos(glm::vec3 pos) {
+    return calcRadCoordFromPos(pos)/pi*180.0f;
+}
+
+glm::dvec2 calcDRadCoordFromDPos(glm::dvec3 pos) {
+    double radius_xz = sqrt(pos.x*pos.x + pos.z*pos.z);
+    double lat = atan(pos.y/radius_xz);
+    double lng = -atan(pos.z/pos.x);
+    if (pos.x < 0.0) {
+        if (lng < 0.0) {
+            lng += pi;
+        } else {
+            lng -= pi;
+        }
+    }
+    return glm::dvec2(lat, lng);
 }
 
 // shader loading

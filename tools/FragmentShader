@@ -3,6 +3,7 @@ in vec3 vertex_normal_cs;
 in vec3 vertex_origin_dir_cs;
 in vec3 vertex_sun_dir_cs;
 in vec2 uv;
+in vec2 water_uv;
 noperspective in vec4 scatter_rgba;
 
 out vec4 color;
@@ -10,10 +11,16 @@ out vec4 color;
 uniform vec3 sun_ws;
 uniform sampler2D terrain_texture_sampler;
 uniform sampler2D spacecube_texture_sampler;
+uniform sampler2D water_texture_sampler;
 uniform int render_target;
 
 void main()
 {
+
+    if(render_target == 3) {
+        float coe = texture(water_texture_sampler, water_uv).a;
+        color.rgb = vec3(1,1,1)*coe;
+    }
 
     vec3 sun_color = vec3(1,1,1);
     float sun_power = 200000000.0f;
