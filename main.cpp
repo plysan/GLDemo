@@ -11,7 +11,7 @@ bool looping = true;
 
 // store vertex offset(according to earth's center) of the updating buffer
 // and update this var to physics when using the updated buffer
-glm::vec3 dbuf_world_offset;
+glm::dvec3 dbuf_world_offset;
 // store view position used for the updating buffer(updating buffer's center is view position)
 // and offset view position by this var when using the updated buffer
 glm::vec3 dbuf_view_offset;

@@ -10,7 +10,7 @@ class Object {
     glm::vec3 position;
     glm::vec3* using_vertex;
     // indicates the offset of the rendering buffer
-    glm::vec3 using_vertex_offset;
+    glm::dvec3 using_vertex_offset;
     float timeStep = 0.01f;
 
     Object();

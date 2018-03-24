@@ -40,7 +40,7 @@ QTProfile::QTProfile(
         texture_unit_size(texture_unit_size),
         texture_unit_dinmension(texture_unit_dinmension),
         lod_max(lod_max) {
-    vertex_offset = glm::vec3();
+    vertex_offset = glm::dvec3();
     elevation_divisor = earth_radius * 10000.0f;
     // make sure malloc is enough for one strip
     buf = _TIFFmalloc(262144L);
@@ -116,9 +116,9 @@ void QTProfile::interpolatePos1D(glm::dvec2 frst_coord, glm::dvec2 lst_coord, gl
 }
 
 void QTProfile::elevationOffset(glm::vec3 *result, double elevation_factor) {
-    result->x = ((double)result->x + (double)vertex_offset.x) * elevation_factor - (double)vertex_offset.x;
-    result->y = ((double)result->y + (double)vertex_offset.y) * elevation_factor - (double)vertex_offset.y;
-    result->z = ((double)result->z + (double)vertex_offset.z) * elevation_factor - (double)vertex_offset.z;
+    result->x = ((double)result->x + vertex_offset.x) * elevation_factor - vertex_offset.x;
+    result->y = ((double)result->y + vertex_offset.y) * elevation_factor - vertex_offset.y;
+    result->z = ((double)result->z + vertex_offset.z) * elevation_factor - vertex_offset.z;
 }
 
 /*
@@ -392,7 +392,7 @@ void QTProfile::selectNode(glm::vec2 bl_coord, glm::vec2 tr_coord, glm::vec2 bl_
     if (node_size < minNodeSize) {
         return;
     }
-    glm::vec3 viewer_pos = vertex_offset - dbuf_view_offset + *viewing_pos;
+    glm::vec3 viewer_pos = toVec3(vertex_offset) - dbuf_view_offset + *viewing_pos;
     float view_node_mid_distance = glm::length(calcFPosFromCoord(mid_coord.x, mid_coord.y) - viewer_pos);
     float view_height_sealevel = glm::abs(glm::length(viewer_pos) - earth_radius) + 0.5f; // less sensitive to lod change near sealevel
     float view_node_mid_distance_horizontal = sqrt(glm::max(pow(view_node_mid_distance, 2) - pow(view_height_sealevel, 2), 0.0));

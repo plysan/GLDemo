@@ -58,6 +58,10 @@ glm::dvec2 calcDRadCoordFromDPos(glm::dvec3 pos) {
     return glm::dvec2(lat, lng);
 }
 
+glm::vec3 toVec3(glm::dvec3 vec) {
+    return glm::vec3((float)vec.x, (float)vec.y, (float)vec.z);
+}
+
 // shader loading
 
 std::string* readShaderCode(const char* file_path) {

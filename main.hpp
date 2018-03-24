@@ -9,7 +9,7 @@ extern QTProfile qt_terrain;
 extern glm::mat4 view_matrix;
 extern glm::mat4 projection_matrix;
 void computeMatricesFromInputs(Object* obj);
-extern glm::vec3 dbuf_world_offset;
+extern glm::dvec3 dbuf_world_offset;
 extern glm::vec3 dbuf_view_offset;
 extern glm::vec3 initial_pos;
 extern Object* viewObj;

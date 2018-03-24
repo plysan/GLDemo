@@ -20,7 +20,7 @@ struct Node {
 class QTProfile {
   public:
     // offset when start generating quardtree
-    glm::vec3 vertex_offset;
+    glm::dvec3 vertex_offset;
 
     Node* node = NULL;
     glm::vec3* result;

@@ -6,6 +6,7 @@
 #include <thread>
 #include "../main.hpp"
 #include "../tools/physics.hpp"
+#include "../tools/tools.hpp"
 
 GLFWwindow* window;
 short windowW = 1366, windowH = 768;
@@ -52,7 +53,7 @@ void updateWindowTitle() {
 
 void computeMatricesFromInputs(Object* obj){
 
-    up = glm::normalize(obj->using_vertex_offset + obj->position);
+    up = glm::normalize(toVec3(obj->using_vertex_offset) + obj->position);
 
     // glfwGetTime is called only once, the first time this function is called
     static double lastTime = glfwGetTime();

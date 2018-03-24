@@ -101,7 +101,6 @@ void water_loop() {
     glUniform3f(camera_pos_ms_id, viewObj->position.x, viewObj->position.y, viewObj->position.z);
     float water_ac = glm::pow(glm::length(glm::dvec3(viewObj->position) + glm::dvec3(viewObj->using_vertex_offset)), 2.0) - glm::pow(earth_radius, 2.0f);
     glUniform1f(water_ac_uniform_id, water_ac);
-    //TODO precision prob when terrain updates
     glm::dvec3 cam_pos_earth = (glm::dvec3)viewObj->position + (glm::dvec3)viewObj->using_vertex_offset;
     float cam_height = glm::length(cam_pos_earth) - earth_radius;
     glUniform1f(cam_height_uniform_id, cam_height);

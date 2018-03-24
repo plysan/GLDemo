@@ -67,7 +67,7 @@ void update_data() {
     dbuf_world_offset = qt_terrain.vertex_offset;
     new_node = new Node;
     qt_terrain.cleanupNode(&node_to_del);
-    glm::vec2 center_coord = calcCoordFromPos(qt_terrain.vertex_offset);
+    glm::vec2 center_coord = calcCoordFromPos(toVec3(qt_terrain.vertex_offset));
     float height_core = glm::length(qt_terrain.vertex_offset);
     float coord_span = std::asin(std::sqrt(std::pow(height_core, 2)-std::pow(earth_radius, 2)) / height_core) * 180.0 / pi;
     float coord_span_int = (int)coord_span + 4.0f;
@@ -99,7 +99,7 @@ void update_data() {
         g_vertex_buffer_data[renderingBufferIndex], &vertex_pointer,
         g_mapped_vertex_element_data, &element_pointer,
         g_mapped_vertex_uv_data,
-        calcCoordFromPos(qt_terrain.vertex_offset), 64, 1.5, 512, qt_terrain.vertex_offset);
+        calcCoordFromPos(toVec3(qt_terrain.vertex_offset)), 64, 1.5, 512, toVec3(qt_terrain.vertex_offset));
     elemant_index_sky_length_update = element_pointer - element_pointer_old;
     printf("execution time: %fs ", (double)(clock() - before)/CLOCKS_PER_SEC);
     printf("points: %d, indices: %d, nodes:%d, texture_nodes:%d\n",
@@ -372,9 +372,9 @@ void world_loop() {
     glm::vec3 lightPos = 1000000.0f*calcFPosFromCoord(0.0f, -68.0f);
     glUniform3f(sun_worldspace_uniform_id, lightPos.x, lightPos.y, lightPos.z);
     glUniform3f(vertex_offset_uniform_id,
-        viewObj->using_vertex_offset.x, viewObj->using_vertex_offset.y, viewObj->using_vertex_offset.z);
+        (float)viewObj->using_vertex_offset.x, (float)viewObj->using_vertex_offset.y, (float)viewObj->using_vertex_offset.z);
     glUniform1f(scatter_height_uniform_id,
-        (glm::length(viewObj->position+viewObj->using_vertex_offset)-earth_radius)/(atmosphere_top_radius-earth_radius));
+        (glm::length(viewObj->position + toVec3(viewObj->using_vertex_offset))-earth_radius)/(atmosphere_top_radius-earth_radius));
 
     glDisable(GL_DEPTH_TEST);
     glUniform1i(render_target_uniform_id, 0);
