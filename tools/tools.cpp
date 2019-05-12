@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstdarg>
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <tiffio.h>
+#include <stdexcept>
 #include <glm/glm.hpp>
 #include "vars.hpp"
 #include "quardtreeTerrain.hpp"
@@ -64,7 +67,7 @@ glm::vec3 toVec3(glm::dvec3 vec) {
 
 // shader loading
 
-std::string* readShaderCode(const char* file_path) {
+void readShaderCode(const char* file_path, char** content) {
     std::string* shader_code = new std::string();
     std::ifstream shader_stream(file_path, std::ios::in);
     if(shader_stream.is_open()){
@@ -72,45 +75,43 @@ std::string* readShaderCode(const char* file_path) {
         while(getline(shader_stream, line))
             *shader_code += "\n" + line;
         shader_stream.close();
-        return shader_code;
+        const std::string::size_type size = shader_code->size();
+        *content = new char[size + 1];
+        memcpy(*content, shader_code->c_str(), size+1);
     }else{
         printf("Error opening %s.\n", file_path);
-        return NULL;
     }
+    delete shader_code;
 }
 
-GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path, const char* global_vars_path){
-
-    // Create the shaders
-    GLuint vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
-
-    std::string** shader_strings = new std::string*[2];
-    const char** source_pointes = new const char*[3];
-    source_pointes[0] = "#version 330 core\n";
-
-    shader_strings[0] = readShaderCode(global_vars_path);
-    shader_strings[1] = readShaderCode(vertex_file_path);
-    source_pointes[1] = shader_strings[0]->c_str();
-    source_pointes[2] = shader_strings[1]->c_str();
-    glShaderSource(vertex_shader_id, 3, source_pointes, NULL);
-    glCompileShader(vertex_shader_id);
-
-    shader_strings[0] = readShaderCode(global_vars_path);
-    shader_strings[1] = readShaderCode(fragment_file_path);
-    source_pointes[1] = shader_strings[0]->c_str();
-    source_pointes[2] = shader_strings[1]->c_str();
-    glShaderSource(fragment_shader_id, 3, source_pointes, NULL);
-    glCompileShader(fragment_shader_id);
-
-    delete[] shader_strings;
-    delete[] source_pointes;
-
-    // Link the program
+GLuint loadShaders(int argc, ...) {
+    va_list args;
+    va_start(args, argc);
     GLuint program_id = glCreateProgram();
-    glAttachShader(program_id, vertex_shader_id);
-    glAttachShader(program_id, fragment_shader_id);
+    char** sources_list = new char*[3];
+    sources_list[0] = (char*)"#version 330 core\n";
+    readShaderCode("tools/vars.hpp", &sources_list[1]);
+    for (int i=0; i<argc; i++) {
+        const char* shader_path = va_arg(args, const char*);
+        GLenum shader_type;
+        int shader_path_len = strlen(shader_path);
+        if (strcmp(shader_path+shader_path_len-5, ".vert") == 0)
+            shader_type = GL_VERTEX_SHADER;
+        else if (strcmp(shader_path+shader_path_len-5, ".frag") == 0)
+            shader_type = GL_FRAGMENT_SHADER;
+        else
+            throw std::runtime_error(std::string("Error reading shader file: ") + shader_path);
+        GLuint shader_id = glCreateShader(shader_type);
+        readShaderCode(shader_path, &sources_list[2]);
+        glShaderSource(shader_id, 3, sources_list, NULL);
+        glCompileShader(shader_id);
+        glAttachShader(program_id, shader_id);
+        glDeleteShader(shader_id);
+        delete[] sources_list[2];
+    }
     glLinkProgram(program_id);
+    delete[] sources_list[1];
+    delete[] sources_list;
 
     // Check the program
     GLint result = GL_FALSE;
@@ -122,9 +123,6 @@ GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path,
         glGetProgramInfoLog(program_id, info_log_length, NULL, &program_error_message[0]);
         printf("Error compiling shaders:\n%s\n", &program_error_message[0]);
     }
-
-    glDeleteShader(vertex_shader_id);
-    glDeleteShader(fragment_shader_id);
 
     return program_id;
 }

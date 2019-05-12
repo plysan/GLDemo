@@ -161,7 +161,7 @@ void world_pre_loop() {
     glBindVertexArray(VertexArrayID);
 
     // Create and compile our GLSL program from the shaders
-    programID = LoadShaders("tools/VertexShader", "tools/FragmentShader", "tools/vars.hpp");
+    programID = loadShaders(2, "shaders/global.vert", "shaders/global.frag");
     glUseProgram(programID);
     matrixMVPID = glGetUniformLocation( programID, "MVP" );
     matrixMID = glGetUniformLocation( programID, "M" );
